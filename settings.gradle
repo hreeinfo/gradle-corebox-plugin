@@ -1,0 +1,6 @@
+rootProject.name = "gradle-corebox-plugin"
+
+include "gradle-corebox-server-plugin"
+include "gradle-corebox-vaadin-plugin"
+include "gradle-corebox-plugins"
+

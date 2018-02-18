@@ -1,0 +1,19 @@
+plugins {
+    id 'groovy'
+    id 'maven'
+    id 'idea'
+}
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+
