@@ -75,7 +75,7 @@ hs_err_pid*
 *Db.script
 
 # logs
-/stacktrace.log
+/stacktrace.loglevel
 /test/reports
 /logs
 

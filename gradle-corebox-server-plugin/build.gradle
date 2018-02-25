@@ -7,6 +7,25 @@ plugins {
 dependencies {
     compile gradleApi()
     compile localGroovy()
+
+    compile "org.apache.commons:commons-lang3:${version_commons_long3}"
+    compile "net.sf.jopt-simple:jopt-simple:${version_jopt}"
+
+    // Jetty application server
+    compile "org.eclipse.jetty.aggregate:jetty-all:${version_jetty}"
+    compile "org.eclipse.jetty:jetty-annotations:${version_jetty}"
+    compile "org.eclipse.jetty:jetty-plus:${version_jetty}"
+    compile "org.eclipse.jetty:jetty-deploy:${version_jetty}"
+    compile "org.eclipse.jetty:apache-jsp:${version_jetty}"
+    compile "org.eclipse.jetty:apache-jstl:${version_jetty}"
+
+    // Payara application server
+    compileOnly "fish.payara.extras:payara-embedded-web:${version_payara}"
+
+    // Tomcat application server
+    compileOnly "org.apache.tomcat.embed:tomcat-embed-core:${version_tomcat}"
+    compileOnly "org.apache.tomcat.embed:tomcat-embed-logging-juli:${version_tomcat_logging}"
+    compileOnly "org.apache.tomcat.embed:tomcat-embed-jasper:${version_tomcat}"
 }
 
 idea {

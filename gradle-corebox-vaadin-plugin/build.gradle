@@ -7,6 +7,9 @@ plugins {
 dependencies {
     compile gradleApi()
     compile localGroovy()
+
+    compile "io.bit3:jsass:${version_jsass}"
+    compile "org.codehaus.groovy.modules.http-builder:http-builder:${version_http_builder}"
 }
 
 idea {
