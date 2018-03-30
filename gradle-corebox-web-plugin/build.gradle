@@ -8,8 +8,12 @@ dependencies {
     compile(gradleApi())
     compile(localGroovy())
 
-    // Vaadin Sass Toolkit
+    // Tomcat application server
+    compile("com.hreeinfo.commons:commons-embed-server:${version_common_embed_server}")
     compile("io.bit3:jsass:${version_jsass}")
+
+
+    //compile("org.codehaus.groovy.modules.http-builder:http-builder:${version_http_builder}")
 }
 
 idea {

@@ -5,11 +5,11 @@ plugins {
 }
 
 dependencies {
-    compile gradleApi()
-    compile localGroovy()
-    
-    compile project(":gradle-corebox-server-plugin")
-    compile project(":gradle-corebox-vaadin-plugin")
+    compile(gradleApi())
+    compile(localGroovy())
+
+    compile(project(":gradle-corebox-server-plugin"))
+    compile(project(":gradle-corebox-vaadin-plugin"))
 }
 
 idea {
