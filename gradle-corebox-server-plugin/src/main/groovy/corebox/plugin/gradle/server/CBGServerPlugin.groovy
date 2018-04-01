@@ -77,7 +77,7 @@ class CBGServerPlugin implements Plugin<Project> {
         }
 
 
-        project.tasks.create(name: CBGServerRunTask.TASK_NAME, group: TASK_GROUP, type: CBGServerRunTask) {
+        project.tasks.create(name: CBGServerRunTask.NAME, group: TASK_GROUP, type: CBGServerRunTask) {
             description = "运行appserver"
             dependsOn TASK_EXPLODE_WAR_NAME
 
@@ -91,7 +91,7 @@ class CBGServerPlugin implements Plugin<Project> {
         }
 
 
-        project.tasks.create(name: CBGServerStopTask.TASK_NAME, group: TASK_GROUP, type: CBGServerStopTask) {
+        project.tasks.create(name: CBGServerStopTask.NAME, group: TASK_GROUP, type: CBGServerStopTask) {
             description = "停止appserver"
         }
     }

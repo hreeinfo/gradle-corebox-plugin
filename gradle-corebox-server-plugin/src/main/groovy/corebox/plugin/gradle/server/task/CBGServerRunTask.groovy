@@ -13,7 +13,7 @@ import org.gradle.api.tasks.Optional
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerRunTask extends CBGServerBaseTask {
-    static final String TASK_NAME = "appRun"
+    static final String NAME = "appRun"
 
 
     @InputDirectory

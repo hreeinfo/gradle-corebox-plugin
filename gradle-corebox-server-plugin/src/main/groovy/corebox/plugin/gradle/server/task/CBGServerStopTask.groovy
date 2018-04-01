@@ -12,7 +12,7 @@ import org.gradle.api.tasks.TaskAction
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerStopTask extends DefaultTask {
-    static final String TASK_NAME = "appStop"
+    static final String NAME = "appStop"
 
     CBGServerStopTask() {
         outputs.upToDateWhen { false }
