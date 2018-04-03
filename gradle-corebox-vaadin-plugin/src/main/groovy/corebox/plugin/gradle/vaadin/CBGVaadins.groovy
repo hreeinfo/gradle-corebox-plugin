@@ -1,19 +1,25 @@
 package corebox.plugin.gradle.vaadin
 
+import corebox.plugin.gradle.common.CBGs
 import corebox.plugin.gradle.vaadin.task.CBGVaadinBuildClassPathJar
 import corebox.plugin.gradle.vaadin.task.CBGVaadinCompileThemeTask
 import groovy.transform.Memoized
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.FileVisitDetails
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.plugins.WarPluginConvention
 import org.gradle.api.tasks.SourceSet
 import org.gradle.util.VersionNumber
 
 import java.util.jar.Attributes
+import java.util.jar.JarFile
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 
@@ -26,23 +32,27 @@ import java.util.jar.Manifest
 class CBGVaadins {
     private static final String VAADIN = "VAADIN"
 
-    private static final String GRADLE_HOME = "org.gradle.java.home"
-    private static final String JAVA_HOME = "java.home"
-    private static final String JAVA_BIN_NAME = "java"
     private static final String JAR_EXTENSION = ".jar"
+    private static final String GWT_MODULE_POSTFIX = '.gwt.xml'
 
-    private static final String PLUS = '+'
-    private static final String SPACE = ' '
-    private static final String WARNING_LOG_MARKER = '[WARN]'
-    private static final String ERROR_LOG_MARKER = '[ERROR]'
-    private static final String INFO_LOG_MARKER = '[INFO]'
-    private static final String STREAM_CLOSED_LOG_MESSAGE = 'Stream was closed'
+
+    private static final String DEFAULT_WIDGETSET = 'com.vaadin.DefaultWidgetSet'
+    private static final String DEFAULT_LEGACY_V6_WIDGETSET = 'com.vaadin.terminal.gwt.DefaultWidgetSet'
+    private static final String DEFAULT_LEGACY_V7_WIDGETSET = 'com.vaadin.v7.Vaadin7WidgetSet'
 
     static final String CLIENT_PACKAGE_NAME = "client"
     static final String VAADIN_CLIENT_DENDENCY = "vaadin-client"
     static final String VAADIN_SHARED_DEPENDENCY = "vaadin-shared"
 
     static final String VAADIN_SERVER_DEPENDENCY = "vaadin-server"
+
+    static final String VAADIN_COMP_SERVER_DEPENDENCY = 'vaadin-compatibility-server'
+    static final String VAADIN_COMP_CLIENT_DEPENDENCY = 'vaadin-compatibility-client'
+    static final String VAADIN_COMP_SHARED_DEPENDENCY = 'vaadin-compatibility-shared'
+    static final String VALIDATION_API_DEPENDENCY = 'validation-api-1.0'
+
+
+    static final String APP_WIDGETSET = 'AppWidgetset'
 
 
     static String getVaadinVersion(Project project) {
@@ -65,11 +75,60 @@ class CBGVaadins {
         getPluginProperties().getProperty('version')
     }
 
+    static enum ProjectType {
+        JAVA,
+        GROOVY,
+        KOTLIN
+    }
+
     @Memoized
     static Properties getPluginProperties() {
         Properties properties = new Properties()
         properties.load(CBGVaadins.class.getResourceAsStream('/gradle-corebox-vaadin-plugin.properties') as InputStream)
         properties
+    }
+
+    /**
+     * 项目的 webapp 目录
+     * @param project
+     * @return
+     */
+    @Memoized
+    static File getWebAppDirectory(Project project) {
+        String outputDir = project.cbvaadin.outputDir
+        if (outputDir) {
+            project.file(outputDir)
+        } else if (project.convention.findPlugin(WarPluginConvention)) {
+            project.convention.getPlugin(WarPluginConvention).webAppDir
+        } else {
+            project.file("src/main/webapp")
+        }
+    }
+
+    /**
+     * 项目的 widgetsets 目录
+     * @param project
+     * @return
+     */
+    @Memoized
+    static File getWidgetsetDirectory(Project project) {
+        File webAppDir = getWebAppDirectory(project)
+        File vaadinDir = new File(webAppDir, VAADIN)
+        File widgetsetsDir = new File(vaadinDir, 'widgetsets')
+        widgetsetsDir
+    }
+
+    /**
+     * 项目的 widgetsets cache 目录
+     * @param project
+     * @return
+     */
+    @Memoized
+    static File getWidgetsetCacheDirectory(Project project) {
+        File webAppDir = getWebAppDirectory(project)
+        File vaadinDir = new File(webAppDir, VAADIN)
+        File unitCacheDir = new File(vaadinDir, 'gwt-unitCache')
+        unitCacheDir
     }
 
     /**
@@ -95,47 +154,21 @@ class CBGVaadins {
         themesDir
     }
 
-    /**
-     * 项目的 webapp 目录
-     * @param project
-     * @return
-     */
     @Memoized
-    static File getWebAppDirectory(Project project) {
-        String outputDir = project.cbvaadin.outputDir
-        if (outputDir) {
-            project.file(outputDir)
-        } else if (project.convention.findPlugin(WarPluginConvention)) {
-            project.convention.getPlugin(WarPluginConvention).webAppDir
-        } else {
-            project.file("src/main/webapp")
+    static String getClientPackage(Project project) {
+        String clientPackage
+        getMainSourceSet(project).srcDirs.each { File srcDir ->
+            project.fileTree(srcDir).visit { FileVisitDetails details ->
+                if (details.name == CLIENT_PACKAGE_NAME && details.directory) {
+                    details.stopVisiting()
+                    clientPackage = details.file.canonicalPath - srcDir.canonicalPath
+                    project.logger.info "Found client package $clientPackage"
+                }
+            }
         }
+        clientPackage
     }
 
-    /**
-     * 返回JavaBinary
-     *
-     * @return
-     */
-    @Memoized
-    static String getJavaBinary(Project project) {
-        String javaHome
-        if (project.hasProperty(GRADLE_HOME)) {
-            javaHome = project.properties[GRADLE_HOME]
-        } else if (System.getProperty(JAVA_HOME)) {
-            javaHome = System.getProperty(JAVA_HOME)
-        }
-
-        if (javaHome) {
-            File javaBin = new File(javaHome, "bin")
-            File java = new File(javaBin, JAVA_BIN_NAME)
-            return java.canonicalPath
-        }
-
-        // Fallback to Java on PATH with a warning
-        project.logger.warn("没有检测到 Java JRE 请确认 JAVA_HOME 是否设置？")
-        JAVA_BIN_NAME
-    }
 
     @Memoized
     static boolean isResolvable(Project project, Configuration configuration) {
@@ -178,110 +211,155 @@ class CBGVaadins {
     }
 
     /**
-     * 针对进程做日志记录
-     * @param project
-     * @param process
-     * @param filename
-     * @param monitor
+     * 返回项目首选的 widgetset TODO 需另外提供方法 用于快速检测是否包含 widgetsets （避免addon和client扫描过程）
      */
-    static void logProcess(Project project, Process process, boolean logToConsole, String filename, Closure monitor) {
-        if (logToConsole) {
-            logProcessToConsole(project, process, monitor)
-        } else {
-            logProcessToFile(project, process, filename, monitor)
-        }
-    }
+    @Memoized
+    static String getWidgetset(Project project) {
+        // TODO 引用错误
+        if (project.vaadinCompile.widgetset) return project.vaadinCompile.widgetset
 
-    /**
-     * 针对进程做日志记录 写入到文件
-     * @param project
-     * @param process
-     * @param filename
-     * @param monitor
-     */
-    static void logProcessToFile(
-            final Project project, final Process process, final String filename, Closure monitor = {}) {
-        File logDir = project.file("$project.buildDir/logs/")
-        logDir.mkdirs()
-
-        final File LOGFILE = new File(logDir, filename)
-        project.logger.info("记录日志到文件 $LOGFILE")
-
-        CBGVaadinPlugin.THREAD_POOL.submit {
-            LOGFILE.withWriterAppend { out ->
-                try {
-                    boolean errorOccurred = false
-
-                    process.inputStream.eachLine { output ->
-                        monitor.call(output)
-                        if (output.contains(WARNING_LOG_MARKER)) out.println WARNING_LOG_MARKER + SPACE + output.replace(WARNING_LOG_MARKER, '').trim()
-                        else if (output.contains(ERROR_LOG_MARKER)) {
-                            errorOccurred = true
-                            out.println ERROR_LOG_MARKER + SPACE + output.replace(ERROR_LOG_MARKER, '').trim()
-                        } else out.println INFO_LOG_MARKER + SPACE + output.trim()
-                        out.flush()
-
-                        // 错误发生时 记录所有信息到控制台
-                        if (errorOccurred) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
-                    }
-                } catch (IOException e) {
-                    project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
-                }
+        // 未设置 widgetset 时 执行查找操作
+        File widgetsetFile = resolveWidgetsetFile(project)
+        if (widgetsetFile) {
+            def sourceDirs = project.sourceSets.main.allSource
+            File rootDir = sourceDirs.srcDirs.find { File directory ->
+                project.fileTree(directory.absolutePath).contains(widgetsetFile)
             }
-        }
-
-        CBGVaadinPlugin.THREAD_POOL.submit {
-            LOGFILE.withWriterAppend { out ->
-                try {
-                    process.errorStream.eachLine { output ->
-                        monitor.call(output)
-                        out.println ERROR_LOG_MARKER + SPACE + output.replace(ERROR_LOG_MARKER, '').trim()
-                        out.flush()
-                    }
-                } catch (IOException e) {
-                    project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
-                }
+            if (rootDir) {
+                File relativePath = new File(rootDir.toURI().relativize(widgetsetFile.toURI()).toString())
+                String widgetset = CBGs.convertFilePathToFQN(relativePath.path, GWT_MODULE_POSTFIX)
+                project.logger.quiet "检测到项目的 widgetset=${widgetset}"
+                widgetset
             }
         }
     }
 
     /**
-     * 针对进程做日志记录 写入到控制台
-     * @param project
-     * @param process
-     * @param monitor
+     * 查找源代码中所对应的 widgetset 此操作会扫描src并确定本项目所包含的 widgetset
      */
-    static void logProcessToConsole(final Project project, final Process process, Closure monitor = {}) {
-        project.logger.info("记录日志到控制台")
+    @Memoized
+    static File resolveWidgetsetFile(Project project) {
 
-        CBGVaadinPlugin.THREAD_POOL.submit {
-            try {
-                boolean errorOccurred = false
-                process.inputStream.eachLine { output ->
-                    monitor.call(output)
-                    if (output.contains(WARNING_LOG_MARKER)) project.logger.warn(output.replace(WARNING_LOG_MARKER, '').trim())
-                    else if (output.contains(ERROR_LOG_MARKER)) errorOccurred = true
-                    else project.logger.info(output.trim())
+        // 在 sources 中查找 module XML
+        def sourceDirs = project.sourceSets.main.allSource
+        List modules = []
+        sourceDirs.srcDirs.each {
+            modules.addAll(project.fileTree(it.absolutePath).include('**/*/*.gwt.xml'))
+        }
+        if (!modules.isEmpty()) return (File) modules.first()
 
-                    // 错误发生时 记录所有信息到控制台
-                    if (errorOccurred) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
-                }
-            } catch (IOException e) {
-                project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
+        // WidgetsetFile 已经定义但未创建 创建该文件 TODO 引用错误
+        String widgetset = project.vaadinCompile.widgetset
+
+        // 如果 client side classes 已存在，则使用 client side package 查找 widgetset
+        if (!widgetset) {
+            String clientPackage = getClientPackage(project)
+            if (clientPackage) {
+                String widgetsetPath = StringUtils.removeEnd(clientPackage, File.separator + CLIENT_PACKAGE_NAME)
+                if (widgetsetPath.size() > 0) widgetsetPath = CBGs.convertFilePathToFQN(widgetsetPath, '') + '.'
+                widgetset = widgetsetPath + APP_WIDGETSET
             }
         }
 
-        CBGVaadinPlugin.THREAD_POOL.submit {
-            try {
-                process.errorStream.eachLine { String output ->
-                    monitor.call(output)
-                    project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
-                }
-            } catch (IOException e) {
-                project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
-            }
+        // 如果 addons 存在 但 widgetset 未定义 使用默认值
+        if (!widgetset && findAddonsInProject(project).size() > 0) {
+            widgetset = APP_WIDGETSET
         }
+
+        // 如果依赖项目具有 widgetsets 使用默认值
+        if (!widgetset && findInheritsInDependencies(project).size() > 0) {
+            widgetset = APP_WIDGETSET
+        }
+
+        if (widgetset) {
+            // 没有检测到，则创建
+            File resourceDir = project.sourceSets.main.resources.srcDirs.first()
+            File widgetsetFile = new File(resourceDir, CBGs.convertFQNToFilePath(widgetset, GWT_MODULE_POSTFIX))
+            widgetsetFile.parentFile.mkdirs()
+            widgetsetFile.createNewFile()
+            return widgetsetFile
+        }
+
+        null
     }
+
+
+    static Set<String> findInheritsInDependencies(Project project, List<Project> scannedProjects = []) {
+        Set<String> inherits = []
+
+        if (scannedProjects.size() > 0) {
+            inherits.addAll(findInheritsInProject(project))
+        }
+
+        scannedProjects << project
+
+        // 扫描子项目以整理 addon 继承关系
+        def attribute = new Attributes.Name('Vaadin-Widgetsets')
+        project.configurations.all.each { Configuration conf ->
+            conf.allDependencies.each { Dependency dependency ->
+                if (dependency in ProjectDependency) {
+                    Project dependentProject = ((ProjectDependency) dependency).dependencyProject
+                    if (!(dependentProject in scannedProjects)) {
+                        inherits.addAll(findInheritsInDependencies(dependentProject, scannedProjects))
+                    }
+                } else if (isResolvable(project, conf)) {
+                    conf.files(dependency).each { File file ->
+                        if (file.file && file.name.endsWith('.jar')) {
+                            file.withInputStream { InputStream stream ->
+                                def jarStream = new JarInputStream(stream)
+                                jarStream.with {
+                                    def mf = jarStream.getManifest()
+                                    def attributes = mf?.mainAttributes
+                                    def widgetsetsValue = attributes?.getValue(attribute)
+                                    if (widgetsetsValue && !dependency.name.startsWith('vaadin-client')) {
+                                        List<String> widgetsets = widgetsetsValue?.split(',')?.collect { it.trim() }
+                                        widgetsets?.each { String widgetset ->
+                                            if (widgetset != DEFAULT_WIDGETSET
+                                                    && widgetset != DEFAULT_LEGACY_V6_WIDGETSET
+                                                    && widgetset != DEFAULT_LEGACY_V7_WIDGETSET) {
+                                                inherits.add(widgetset)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        inherits
+    }
+
+    private static Set<String> findInheritsInProject(Project project) {
+        if (!project.hasProperty('vaadin')) { // TODO 需要修正属性
+            return []
+        }
+
+        Set<String> inherits = []
+
+        def scan = { File srcDir ->
+            if (srcDir.exists()) {
+                project.fileTree(srcDir.absolutePath)
+                        .include("**/*/*$GWT_MODULE_POSTFIX")
+                        .each { File file ->
+                    if (file.exists() && file.isFile()) {
+                        def path = file.absolutePath.substring(srcDir.absolutePath.size() + 1)
+                        def widgetset = CBGs.convertFilePathToFQN(path, GWT_MODULE_POSTFIX)
+                        inherits.add(widgetset)
+                    }
+                }
+            }
+        }
+
+        getMainSourceSet(project).srcDirs.each(scan)
+
+        project.sourceSets.main.resources.srcDirs.each(scan)
+
+        inherits
+    }
+
 
     @Memoized
     static FileCollection getWarClasspath(Project project) {
@@ -372,5 +450,100 @@ class CBGVaadins {
         } else project.logger.warn("Failed to get artifact version from non-resolvable configuration $conf")
 
         version
+    }
+
+    // TODO 需要实现
+    @Memoized
+    static FileCollection getClientCompilerClassPath(Project project) {
+        FileCollection collection = project.sourceSets.main.runtimeClasspath
+        collection += project.sourceSets.main.compileClasspath
+
+        getMainSourceSet(project).srcDirs.each {
+            collection += project.files(it)
+        }
+
+        project.sourceSets.main.java.srcDirs.each { File dir ->
+            collection += project.files(dir)
+        }
+
+        // 过滤所需依赖
+        collection = collection.filter { File file ->
+            if (file.name.endsWith(JAR_EXTENSION)) {
+
+                // 增加 GWT compiler + deps
+                if (file.name.startsWith(VAADIN_SERVER_DEPENDENCY) ||
+                        file.name.startsWith(VAADIN_CLIENT_DENDENCY) ||
+                        file.name.startsWith(VAADIN_SHARED_DEPENDENCY) ||
+                        file.name.startsWith(VAADIN_COMP_SERVER_DEPENDENCY) ||
+                        file.name.startsWith(VAADIN_COMP_CLIENT_DEPENDENCY) ||
+                        file.name.startsWith(VAADIN_COMP_SHARED_DEPENDENCY) ||
+                        file.name.startsWith(VALIDATION_API_DEPENDENCY)) {
+                    return true
+                }
+
+                // Addons: client side widgetset
+                JarFile jar = new JarFile(file.absolutePath)
+                if (!jar.manifest) {
+                    return false
+                }
+
+                Attributes attributes = jar.manifest.mainAttributes
+                return attributes.getValue('Vaadin-Widgetsets')
+            }
+            true
+        }
+
+        // 直接增加额外的依赖到 classpath
+        collection += project.configurations[CBGVaadinPlugin.CONFIGURATION_CLIENT_COMPILE]
+
+        // 确保 gwt sdk libs 顺序 TODO 引用错误
+        if (project.vaadinCompile.gwtSdkFirstInClasspath) collection = moveGwtSdkFirstInClasspath(project, collection)
+
+        collection
+    }
+
+    // TODO 引用错误
+    @Memoized
+    static FileCollection moveGwtSdkFirstInClasspath(Project project, FileCollection collection) {
+        if (project.vaadin.manageDependencies) { // TODO 引用错误
+            FileCollection gwtCompilerClasspath = project.configurations[CBGVaadinPlugin.CONFIGURATION_CLIENT]
+            return gwtCompilerClasspath + (collection - gwtCompilerClasspath)
+        } else if (project.appVaadinWidgetset.getGwtSdkFirstInClasspath()) {
+            project.logger.log(LogLevel.WARN, 'Cannot move GWT SDK first in classpath since plugin does not manage ' +
+                    'dependencies. You can set vaadinCompile.gwtSdkFirstInClasspath=false and ' +
+                    'arrange the dependencies yourself if you need to.')
+        }
+        collection
+    }
+
+    // TODO 引用错误
+    @Memoized
+    static SourceDirectorySet getMainSourceSet(Project project, boolean forceDefaultJavaSourceset = false) {
+        // TODO 引用错误
+        if (project.vaadin.mainSourceSet) {
+            project.vaadin.mainSourceSet
+        } else if (forceDefaultJavaSourceset) {
+            project.sourceSets.main.java
+        } else {
+            switch (getProjectType(project)) {
+                case ProjectType.GROOVY:
+                    return project.sourceSets.main.groovy
+                case ProjectType.KOTLIN:
+                    return project.sourceSets.main.kotlin
+                case ProjectType.JAVA:
+                    return project.sourceSets.main.java
+            }
+        }
+    }
+
+    @Memoized
+    static ProjectType getProjectType(Project project) {
+        if (project.plugins.findPlugin('groovy')) {
+            ProjectType.GROOVY
+        } else if (project.plugins.findPlugin('org.jetbrains.kotlin.jvm')) {
+            ProjectType.KOTLIN
+        } else {
+            ProjectType.JAVA
+        }
     }
 }

@@ -1,5 +1,6 @@
 package corebox.plugin.gradle.vaadin.task
 
+import corebox.plugin.gradle.common.CBGs
 import corebox.plugin.gradle.vaadin.CBGVaadins
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
@@ -72,7 +73,7 @@ class CBGVaadinUpdateAddonStylesTask extends DefaultTask {
                 }
             }
 
-            List<String> importer = [CBGVaadins.getJavaBinary(project)]
+            List<String> importer = [CBGs.getJavaBinary(project)]
             importer.add('-cp')
             importer.add(classpath.asPath)
             importer.add('com.vaadin.server.themeutils.SASSAddonImportFileCreator')
@@ -80,7 +81,7 @@ class CBGVaadinUpdateAddonStylesTask extends DefaultTask {
 
             Process process = importer.execute([], project.buildDir)
 
-            CBGVaadins.logProcess(project, process, getLogToConsole(), 'addon-style-updater.log') { true }
+            CBGs.logProcess(project, process, getLogToConsole(), 'addon-style-updater.log') { true }
 
             int result = process.waitFor()
             if (result != 0) {

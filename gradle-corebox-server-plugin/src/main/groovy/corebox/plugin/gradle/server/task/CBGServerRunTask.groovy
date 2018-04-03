@@ -1,6 +1,5 @@
 package corebox.plugin.gradle.server.task
 
-import corebox.plugin.gradle.server.CBGServerInstance
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
@@ -27,17 +26,41 @@ class CBGServerRunTask extends CBGServerBaseTask {
     File classesDirectory
 
     @Override
-    protected void configWebapp(CBGServerInstance instance) {
+    protected String getProcessWebapp() {
+        return this.getWebapp().canonicalPath
+    }
 
-        if (this.getWebAppClasspath()) this.getWebAppClasspath().each { file ->
-            instance.callBuilder("classesdir", file.getAbsolutePath())
+    @Override
+    protected Set<String> getProcessServerClasspaths() {
+        if (!this.getWebAppClasspath()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+        this.getWebAppClasspath().each { File f ->
+            if (f) os.add(f.canonicalPath)
         }
+
+        return os
+    }
+
+    @Override
+    protected Set<String> getProcessClassesdirs() {
+        Set<String> os = super.getProcessClassesdirs()
+        if (this.getClassesDirectory()) {
+            if (!os) os = new LinkedHashSet<>()
+            os.add(this.getClassesDirectory().canonicalPath)
+        }
+        return os
+    }
+
+    @Override
+    protected Set<String> getProcessOptions() {
+        Set<String> os = super.getProcessOptions()
 
         if (this.getClassesDirectory()) {
-            instance.callBuilder("classesdir", this.getClassesDirectory().getAbsolutePath())
-            instance.callBuilder("option", "classes_dir", this.getClassesDirectory().getAbsolutePath())
+            if (!os) os = new LinkedHashSet<>()
+            os.add("classes_dir:${this.getClassesDirectory().canonicalPath}")
         }
 
-        instance.callBuilder("webapp", this.getWebapp().absolutePath)
+        return os
     }
 }

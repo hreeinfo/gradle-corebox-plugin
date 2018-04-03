@@ -85,9 +85,9 @@ final class CBGServers {
     static FileCollection appRunClasspath(Project project, CBGServerExtension spe) {
         if (project == null || spe == null) return null
 
-        if (spe.getExplode()) { // explode 模式
+        if (spe.getExplode()) { // TODO explode 模式
             return null
-        } else { // 直接运行模式 对应 src/main/webapp
+        } else { // TODO 直接运行模式 对应 src/main/webapp
             return null
         }
     }
@@ -123,5 +123,15 @@ final class CBGServers {
         if (!tmpDir.exists()) tmpDir.mkdirs()
 
         return new File(tmpDir, ".cbserver.lock")
+    }
+
+    static void forceDeleteServerLockFile(Project project) {
+        if (!project) return
+        try {
+            File lockfile = runningServerLockFile(project)
+            if (lockfile == null) lockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.lock")
+            if (lockfile.exists()) lockfile.delete()
+        } catch (Throwable ignored) {
+        }
     }
 }

@@ -1,7 +1,4 @@
 package corebox.plugin.gradle.server.task
-
-import corebox.plugin.gradle.server.CBGServerInstance
-
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -12,7 +9,12 @@ class CBGServerRunWarTask extends CBGServerBaseTask {
     static final String TASK_NAME = "appRunWar"
 
     @Override
-    protected void configWebapp(CBGServerInstance instance) {
+    protected String getProcessWebapp() {
+        return null
+    }
 
+    @Override
+    protected Set<String> getProcessServerClasspaths() {
+        return null
     }
 }

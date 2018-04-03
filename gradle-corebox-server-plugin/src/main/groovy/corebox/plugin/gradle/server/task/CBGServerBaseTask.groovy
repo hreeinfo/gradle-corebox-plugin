@@ -1,17 +1,10 @@
 package corebox.plugin.gradle.server.task
 
+import corebox.plugin.gradle.common.CBGs
 import corebox.plugin.gradle.server.CBGServerPlugin
 import corebox.plugin.gradle.server.CBGServers
-import corebox.plugin.gradle.server.CBGServerInstance
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.api.tasks.*
-
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 /**
  *
@@ -20,7 +13,9 @@ import java.util.concurrent.Future
  * <p>版权所属：xingxiuyi </p>
  */
 abstract class CBGServerBaseTask extends DefaultTask {
-    private final ExecutorService executor = Executors.newSingleThreadExecutor()
+    private static final String CLASSPATH_SWITCH = "-cp"
+    private static final String TEMPDIR_SWITCH = "-Djava.io.tmpdir"
+
     private Thread shutdownHook
 
     @Input
@@ -63,135 +58,111 @@ abstract class CBGServerBaseTask extends DefaultTask {
     @Optional
     Map<String, String> options = [:]
 
+    @Input
+    @Optional
+    Boolean LogToConsole = Boolean.TRUE
+
+    @Input
+    @Optional
+    List<String> jvmArgs = []
+
     CBGServerBaseTask() {
         outputs.upToDateWhen { false }
     }
 
     @TaskAction
     protected void startServer() {
-        final CountDownLatch startupBarrier = new CountDownLatch(1)
+        Process process
 
-        Future<?> future = this.executor.submit(new Runnable() {
-            @Override
-            void run() {
-                ClassLoader originLoader = Thread.currentThread().contextClassLoader
-                try {
-                    ClassLoader ncl = createRuntimeClassLoader()
+        process = this.executeServerProcess()
 
-                    Thread.currentThread().setContextClassLoader(ncl)
-
-
-                    CBGServerInstance instance = CBGServerInstance.instance
-
-                    instance.callBuilder("port", getPort())
-                    instance.callBuilder("loglevel", getLoglevel())
-                    instance.callBuilder("context", getContext())
-
-                    if (getWorkingdir()) instance.callBuilder("workingdir", getWorkingdir().getAbsolutePath())
-                    if (getConfigfile()) instance.callBuilder("configfile", getConfigfile().getAbsolutePath())
-
-                    if (getClassesdirs()) for (String c : getClassesdirs()) {
-                        if (c) instance.callBuilder("classesdir", c)
-                    }
-                    if (getResourcesdirs()) for (String r : getResourcesdirs()) {
-                        if (r) instance.callBuilder("resourcedir", r)
-                    }
-
-                    innerLifeCycleCmds(startupBarrier).each { k, v -> instance.callBuilder("listener", k, v) }
-
-                    configWebapp(instance)
-
-                    instance.callBuilder("options", getOptions())
-
-                    instance.initServer(getType(), getTypeClass())
-
-                    try {
-                        logger.debug "开始启动 server..."
-
-                        // 此时始终以后台方式运行tomcat，最终由 startupBarrier 决定是否锁定
-                        if (instance) instance.start(ClassLoader.systemClassLoader.parent, true)
-
-                        addShutdownHook(instance, startupBarrier)
-
-                        waitRunningServerLock(instance, startupBarrier, getDaemon())
-                    } catch (Exception e) {
-                        stopServerRunner(instance, startupBarrier)
-                        throw new GradleException("启动server发生错误", e)
-                    } finally {
-                        removeShutdownHook()
-                    }
-                } catch (Throwable e) {
-                    logger.error e.getMessage()
-                } finally {
-                    if (originLoader) Thread.currentThread().setContextClassLoader(originLoader)
-                }
+        if (this.getDaemon()) {
+            CBGs.logProcess(project, process, false, true, "embed-server-${this.getType()}.log") { String line ->
+                true
             }
-        })
 
-        startupBarrier.await()
+            logger.quiet "${this.getType()} 启动完成并在后台运行 如需关闭服务请执行 appStop 命令"
+        } else {
+            CBGs.logProcess(project, process, this.getLogToConsole(), true, "embed-server-${this.getType()}.log") { String line ->
+                true
+            }
+
+            addShutdownHook(process)
+
+            process.waitFor()
+        }
     }
 
-    protected ClassLoader createRuntimeClassLoader(ClassLoader originLoader) {
-        if (originLoader == null) originLoader = Thread.currentThread().contextClassLoader
-        if (originLoader == null) originLoader = CBGServerBaseTask.class.getClassLoader()
 
-        URL[] urls = CBGServers.runtimeEmbedServerClasspaths(this.project)
-        if (urls) return new URLClassLoader(urls, originLoader)
-        else return originLoader
+    protected Process executeServerProcess() {
+        String tc = this.getTypeClass()
+        if (!tc) tc = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE_CLASS
+
+
+        List compileProcess = [CBGs.getJavaBinary(this.project)]
+        if (this.getJvmArgs()) {
+            compileProcess += this.getJvmArgs() as List
+        }
+
+        compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
+        compileProcess += [CLASSPATH_SWITCH, this.project.configurations[CBGServerPlugin.SERVER_EXTENSION_NAME].asPath]
+
+        compileProcess += [tc]
+
+        if (this.getPort()) compileProcess += ["--port=${this.getPort()}"]
+        if (this.getContext()) compileProcess += ["--context=${this.getContext()}"]
+
+        if (this.getWorkingdir()) compileProcess += ["--workingdir=${this.getWorkingdir()}"]
+        if (this.getConfigfile()) compileProcess += ["--configfile=${this.getConfigfile()}"]
+        if (this.getLoglevel()) compileProcess += ["--loglevel=${this.getLoglevel()}"]
+
+        String pWebapp = this.getProcessWebapp()
+        if (!pWebapp) pWebapp = this.getWebapp().canonicalPath
+        compileProcess += ["--webapp=${pWebapp}"]
+
+        File pLockfile = CBGServers.runningServerLockFile(project)
+        if (pLockfile == null) pLockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.lock")
+
+        compileProcess += ["--lockfile=${pLockfile.canonicalPath}"]
+
+        this.getProcessClassesdirs().each { String s ->
+            compileProcess += ["--classesdir=${s}"]
+        }
+
+        this.getProcessResourcedirs().each { String s ->
+            compileProcess += ["--resourcesdir=${s}"]
+        }
+
+        this.getProcessServerClasspaths().each { String s ->
+            compileProcess += ["--serverClasspath=${s}"]
+        }
+
+        this.getProcessOptions().each { String o ->
+            compileProcess += ["--option=${o}"]
+        }
+
+        project.logger.info "Server 执行命令 ${compileProcess.toString()}"
+
+        return compileProcess.execute([], this.project.buildDir)
     }
 
     /**
-     * 实现配置的具体逻辑
+     * 强制退出实例
+     * @param process
      */
-    protected abstract void configWebapp(CBGServerInstance instance)
-
-    private void waitRunningServerLock(CBGServerInstance instance, CountDownLatch startupBarrier, boolean daemonMode) {
-        if (daemonMode) startupBarrier.countDown()
-
-        Project project = this.getProject()
-        if (![project]) return
-
-        final File lockFile = CBGServers.runningServerLockFile(project)
-        if (lockFile == null) {
-            logger.error "无法找到锁文件"
-            return
-        }
-
-        if (lockFile.exists()) lockFile.delete()
-
-        lockFile.createNewFile()
-
-        while (lockFile.exists()) {
-            try {
-                Thread.sleep(2000)
-            } catch (Throwable ignored) {
-            }
-        }
-
-        stopServerRunner(instance, startupBarrier)
-    }
-
-    private void interruptRunningServerLock() {
-        Project project = this.getProject()
-        if (!project) return
-
-        try {
-            File lockFile = CBGServers.runningServerLockFile(project)
-            if (lockFile == null || !lockFile.exists()) return
-
-            lockFile.delete()
-        } catch (Throwable ignored) {
-        }
-    }
-
-
-    private void addShutdownHook(CBGServerInstance instance, final CountDownLatch startupBarrier) {
+    private void addShutdownHook(Process process) {
         this.shutdownHook = new Thread(new Runnable() {
             @Override
             void run() {
                 try {
-                    interruptRunningServerLock()
-                    stopServerRunner(instance, startupBarrier)
+                    CBGServers.forceDeleteServerLockFile(project)
+                    // 等待超时后销毁进程
+                    for (int i = 0; i < 300; i++) {
+                        if (!process.isAlive()) break
+
+                        if (i > 290) process.destroy()
+                        Thread.sleep(1000)
+                    }
                 } catch (Throwable ignored) {
                 }
             }
@@ -200,74 +171,58 @@ abstract class CBGServerBaseTask extends DefaultTask {
         Runtime.getRuntime().addShutdownHook(this.shutdownHook)
     }
 
-    private void removeShutdownHook() {
-        if (this.shutdownHook) {
-            Runtime.getRuntime().removeShutdownHook(this.shutdownHook)
+    /**
+     * 下级类需实现方法 获取 webapp 目录
+     * @return
+     */
+    protected abstract String getProcessWebapp()
+
+    /**
+     * 下级类需事先方法 获取 server 环境运行的 classpath
+     *
+     * 说明：
+     *
+     * 对于 war 任务（webapp目标中已包含lib且已生成所有依赖的jar）时，不应当包含任务依赖
+     *
+     * 对于 webapp 任务 （webapp目标中不存在lib，需要手工将依赖的类路径以及lib包含到此项中）
+     * @return
+     */
+    protected abstract Set<String> getProcessServerClasspaths()
+
+    protected Set<String> getProcessClassesdirs() {
+        if (!this.getClassesdirs()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+        this.getClassesdirs().each { String s ->
+            if (s) os.add(s)
         }
+
+        return os
     }
 
-    private void stopServerRunner(CBGServerInstance instance, final CountDownLatch startupBarrier) {
-        try {
-            if (instance) instance.stop()
-        } catch (Throwable ignored) {
+    protected Set<String> getProcessResourcedirs() {
+        if (!this.getResourcesdirs()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+        this.getResourcesdirs().each { String s ->
+            if (s) os.add(s)
         }
 
-        try {
-            if (executor) executor.shutdownNow()
-        } catch (Throwable ignored) {
+        return os
+    }
+
+
+    protected Set<String> getProcessOptions() {
+        if (!this.getOptions()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+        this.getOptions().each { String k, String v ->
+            if (k) {
+                if (v) os.add("${k}:${v}")
+                else os.add("${k}:")
+            }
         }
 
-
-        finishLatch(startupBarrier)
-
-        if (this.getDaemon()) System.exit(0) // TODO daemon模式下 停止服务存在问题 使用强制退出的办法
-    }
-
-    private Map<String, Runnable> innerLifeCycleCmds(final CountDownLatch startupBarrier) {
-        Map<String, Runnable> map = [:]
-
-        map.put("onStarting", new Runnable() {
-            @Override
-            void run() {
-                logger.quiet "开始启动服务..."
-                if (startupBarrier && getDaemon()) {
-                    startupBarrier.countDown()
-                }
-            }
-        })
-
-        map.put("onStarted", new Runnable() {
-            @Override
-            void run() {
-                logger.quiet "服务已经启动"
-            }
-        })
-
-        map.put("onFailure", new Runnable() {
-            @Override
-            void run() {
-                logger.quiet "服务启动失败!"
-            }
-        })
-
-        map.put("onStopping", new Runnable() {
-            @Override
-            void run() {
-                logger.quiet "开始停止服务..."
-            }
-        })
-
-        map.put("onStopped", new Runnable() {
-            @Override
-            void run() {
-                logger.quiet "服务已经停止"
-                finishLatch(startupBarrier)
-            }
-        })
-        return map
-    }
-
-    public static void finishLatch(final CountDownLatch startupBarrier) {
-        while (startupBarrier && startupBarrier.count > 0) startupBarrier.countDown()
+        return os
     }
 }

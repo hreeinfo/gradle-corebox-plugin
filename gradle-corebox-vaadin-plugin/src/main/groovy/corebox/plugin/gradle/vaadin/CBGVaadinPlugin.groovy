@@ -15,10 +15,6 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.plugins.WarPlugin
 import org.gradle.api.tasks.bundling.War
 
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicInteger
-
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -31,13 +27,10 @@ class CBGVaadinPlugin implements Plugin<Project> {
 
     static final String CONFIGURATION_THEME = "cbvaadin-theme-compiler"
     static final String CONFIGURATION_SERVER = "cbvaadin-server"
-
-    static final Executor THREAD_POOL = Executors.newCachedThreadPool({ Runnable r ->
-        new Thread(r, "gradle-corebox-vaadin-plugin-thread-${THREAD_COUNTER.getAndIncrement()}")
-    })
+    static final String CONFIGURATION_CLIENT = 'cbvaadin-client'
+    static final String CONFIGURATION_CLIENT_COMPILE = 'cbvaadin-client-compile' // TODO 此处对应 vaadinCompile 需确定是否需要此名称与Task一致
 
 
-    private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(1)
 
     @Override
     void apply(Project project) {

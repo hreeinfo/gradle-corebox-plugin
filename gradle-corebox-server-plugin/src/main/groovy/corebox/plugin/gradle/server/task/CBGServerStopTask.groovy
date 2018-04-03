@@ -21,18 +21,7 @@ class CBGServerStopTask extends DefaultTask {
 
     @TaskAction
     void stop() {
-        try {
-            Project project = this.getProject()
-            if (![project]) return
-
-            final File lockFile = CBGServers.runningServerLockFile(project)
-            if (lockFile == null) return
-
-            if (lockFile.exists()) lockFile.delete()
-
-            logger.quiet "服务器停止命令已提交"
-        } catch (Exception e) {
-            logger.error "停止服务发生错误" + e.getMessage(), e
-        }
+        CBGServers.forceDeleteServerLockFile(this.project)
+        logger.quiet "服务器停止命令已提交"
     }
 }

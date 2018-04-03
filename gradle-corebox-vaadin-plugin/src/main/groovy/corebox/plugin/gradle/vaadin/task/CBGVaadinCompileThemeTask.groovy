@@ -1,5 +1,6 @@
 package corebox.plugin.gradle.vaadin.task
 
+import corebox.plugin.gradle.common.CBGs
 import corebox.plugin.gradle.vaadin.CBGVaadins
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
@@ -97,6 +98,9 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
 
     /**
      * 编译项目
+     *
+     * TODO 当前生成到src中 需要生成到临时目录 !!!
+     *
      * @param project
      * @param isRecompile
      * @return
@@ -121,13 +125,12 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
             File dir = new File(theme.parent)
 
             if (isRecompile) {
-                logger.lifecycle "重新编译 ${theme.canonicalPath}..."
+                logger.quiet "重新编译 Theme ${dir.name}/${theme.name}..."
             } else {
-                logger.info "开始编译 ${theme.canonicalPath}..."
+                logger.quiet "开始编译 Theme ${dir.name}/${theme.name}..."
             }
 
             def processStartTime = System.currentTimeMillis()
-
 
             Process process
 
@@ -152,8 +155,8 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
             }
 
             boolean failed = false
-            // TODO 此处需要判断是否记录到控制台
-            CBGVaadins.logProcess(project, process, this.getLogToConsole(), "theme-compile.log") { String line ->
+
+            CBGs.logProcess(project, process, this.getLogToConsole(), "theme-compile.log") { String line ->
                 if (line.contains("error")) {
                     logger.error(line)
                     failed = true
@@ -178,20 +181,8 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
         }
     }
 
-    /**
-     * Creates a process that runs the Vaadin SASS compiler
-     *
-     * @param project
-     *      the project to compile the SASS themes for
-     * @param themePath
-     *      the path of the theme
-     * @param targetCSSFile
-     *      the CSS file to compile into
-     * @return
-     * the process that runs the compiler
-     */
     protected Process executeVaadinSassCompiler(File themeDir, File targetCSSFile) {
-        def compileProcess = [CBGVaadins.getJavaBinary(project)]
+        def compileProcess = [CBGs.getJavaBinary(project)]
         if (this.getJvmArgs()) {
             compileProcess += this.getJvmArgs() as List
         }
@@ -209,7 +200,7 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
 
         logger.info "使用编译器 libsass 编译 ${themeDir}"
 
-        List compileProcess = [CBGVaadins.getJavaBinary(project)]
+        List compileProcess = [CBGs.getJavaBinary(project)]
         if (this.getJvmArgs()) {
             compileProcess += this.getJvmArgs() as List
         }

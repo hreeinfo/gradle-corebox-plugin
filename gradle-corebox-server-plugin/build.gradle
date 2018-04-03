@@ -8,6 +8,8 @@ dependencies {
     compile(gradleApi())
     compile(localGroovy())
 
+    compile(project(":gradle-corebox-common-plugin"))
+
     // Tomcat application server
     compileOnly("com.hreeinfo.commons:commons-embed-server:${version_common_embed_server}")
     //compile("com.hreeinfo.commons:commons-embed-server-tomcat:${version_common_embed_server}")

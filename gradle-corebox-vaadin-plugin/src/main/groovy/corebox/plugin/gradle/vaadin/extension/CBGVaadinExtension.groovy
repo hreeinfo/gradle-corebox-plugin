@@ -25,6 +25,8 @@ class CBGVaadinExtension {
     String vaadinSassVersion = null
     String libsassVersion = null
 
+    String widgetset = null
+
     public void enable(Boolean enable) {
         this.enable = enable
     }
@@ -73,5 +75,9 @@ class CBGVaadinExtension {
 
     public void libsassVersion(String libsassVersion) {
         this.libsassVersion = libsassVersion
+    }
+
+    public void widgetset(String widgetset) {
+        this.widgetset = widgetset
     }
 }

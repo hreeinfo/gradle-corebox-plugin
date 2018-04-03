@@ -6,6 +6,7 @@ import corebox.plugin.gradle.server.task.CBGServerRunTask
 import corebox.plugin.gradle.server.task.CBGServerStopTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.WarPlugin
 
 /**
@@ -73,7 +74,7 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("loglevel") { spe.loglevel }
             conventionMapping.map("classesdirs") { spe.classesdirs }
             conventionMapping.map("resourcesdirs") { spe.resourcesdirs }
-            conventionMapping.map("options") { spe.options }
+            conventionMapping.map("options") { findEmbedServerTypeOptions(spe) }
         }
 
 
@@ -83,7 +84,14 @@ class CBGServerPlugin implements Plugin<Project> {
 
 
             conventionMapping.map("webapp") { CBGServers.appRunWebappDir(project, spe) }
-            conventionMapping.map("webAppClasspath") { project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath }
+            conventionMapping.map("webAppClasspath") {
+                if (spe.explode) {
+                    FileCollection runtimeClasspath = project.files()
+                    return runtimeClasspath
+                } else {
+                    return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
+                }
+            }
             conventionMapping.map("classesDirectory") {
                 File acd = (project.sourceSets.main.output.classesDirs != null) ? project.sourceSets.main.output.classesDirs.first() : null
                 (acd != null && acd.exists()) ? acd : null
@@ -148,5 +156,32 @@ class CBGServerPlugin implements Plugin<Project> {
         }
 
         return EMBED_SERVER_DEFAULT_TYPE_CLASS
+    }
+
+    private static Map<String, String> findEmbedServerTypeOptions(CBGServerExtension spe) {
+        if (!spe) return [:]
+
+        String type = spe.type
+        if (!type) return [:]
+
+        Map<String, String> etoptions = [:]
+        if (spe.options) etoptions.putAll(spe.options)
+
+
+        switch (type.toUpperCase()) {
+            case "JETTY":
+                // TODO 增加专用参数
+                break
+            case "TOMCAT":
+                // TODO 增加专用参数
+                break
+            case "PAYARA":
+                // TODO 增加专用参数
+                break
+            default:
+                break
+        }
+
+        return etoptions
     }
 }
