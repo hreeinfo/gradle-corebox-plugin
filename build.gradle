@@ -4,6 +4,10 @@ buildscript {
         jcenter()
         mavenCentral()
     }
+
+    dependencies {
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:${plugin_version_bintray}"
+    }
 }
 
 configure(allprojects) {
@@ -14,5 +18,159 @@ configure(allprojects) {
         jcenter()
         mavenCentral()
     }
+
+
+    apply plugin: "com.jfrog.bintray"
+    apply plugin: "maven-publish"
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                pom.withXml {
+                    def root = asNode()
+                    root.appendNode("name", "gradle-corebox-plugin")
+                    root.appendNode("description", "Gradle CoreBOX plugin.")
+                    root.appendNode("url", "https://github.com/hreeinfo/gradle-corebox-plugin")
+                    root.appendNode("inceptionYear", "2018")
+
+                    def scm = root.appendNode("scm")
+                    scm.appendNode("url", "https://github.com/hreeinfo/gradle-corebox-plugin")
+                    scm.appendNode("connection", "scm:https://xingxiuyi@github.com/hreeinfo/gradle-corebox-plugin.git")
+                    scm.appendNode("developerConnection", "scm:git://github.com/hreeinfo/gradle-corebox-plugin.git")
+
+                    def license = root.appendNode("licenses").appendNode("license")
+                    license.appendNode("name", "The Apache Software License, Version 2.0")
+                    license.appendNode("url", "http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    license.appendNode("distribution", "repo")
+
+                    def developers = root.appendNode("developers")
+                    def bmuschko = developers.appendNode("developer")
+                    bmuschko.appendNode("id", "xingxiuyi")
+                    bmuschko.appendNode("name", "Xing Xiuyi")
+                    bmuschko.appendNode("email", "xingxiuyi@gmail.com")
+                }
+            }
+        }
+    }
+
+
+
+    bintray {
+        user = project.hasProperty("bintrayUser") ? project.getProperty("bintrayUser") : null
+        key = project.hasProperty("bintrayKey") ? project.getProperty("bintrayKey") : null
+        publications = ["mavenJava"]
+        publish = true
+
+        pkg {
+            userOrg = "hreeinfo"
+            repo = "plugins"
+            name = "gradle-corebox-plugin"
+            desc = "Gradle CoreBOX plugin."
+            websiteUrl = "https://github.com/hreeinfo/gradle-corebox-plugin"
+            issueTrackerUrl = "https://github.com/hreeinfo/gradle-corebox-plugin/issues"
+            vcsUrl = "https://github.com/hreeinfo/gradle-corebox-plugin.git"
+            licenses = ["Apache-2.0"]
+            labels = ["gradle", "corebox", "embedserver", "vaadin", "web", "plugin"]
+            publicDownloadNumbers = true
+
+            version {
+                vcsTag = "v$project.version"
+                gpg {
+                    sign = true
+                    passphrase = project.hasProperty('gpgPassphrase') ? project.getProperty('gpgPassphrase') : null
+                }
+
+                /* 当前版本通过 bintray 手工同步 后续自动构建开启
+                mavenCentralSync {
+                    sync = true
+                    user = project.hasProperty('mavenCentralUserToken') ? project.getProperty('mavenCentralUserToken') : null
+                    password = project.hasProperty('mavenCentralPassword') ? project.getProperty('mavenCentralPassword') : null
+                    close = '1'
+                }
+                 */
+            }
+        }
+    }
 }
 
+
+
+configure(subprojects) {
+    apply plugin: "java"
+    apply plugin: "groovy"
+    apply plugin: "maven"
+
+    compileJava {
+        sourceCompatibility = "1.8"
+        targetCompatibility = "1.8"
+        options.compilerArgs += "-Xlint:-options";
+
+        // 在独立的进程中编译 使用增量编译
+        //options.fork = true
+        //options.incremental = true
+    }
+    compileTestJava {
+        sourceCompatibility = "1.8"
+        targetCompatibility = "1.8"
+        options.compilerArgs += "-Xlint:-options";
+
+        // 在独立的进程中编译 使用增量编译
+        //options.fork = true
+        //options.incremental = true
+    }
+
+    javadoc {
+        exclude("**/internal/**", "**/Internal*", "**/*Internal", "**/Test*", "**/*Test", "**/temp/**")
+        failOnError = false
+        options.quiet()
+
+        options.charSet("UTF-8")
+        options.docEncoding("UTF-8")
+        options.locale("zh_CN")
+
+        options.quiet()
+        options.showFromPublic()
+        options.header("${project_title}")
+        options.windowTitle("${project_title}")
+        options.docTitle("${project_title}")
+        options.footer("${project_productor}")
+
+        options.addStringOption("Xdoclint:none Xdoclint:-accessibility Xdoclint:-html Xdoclint:-missing Xdoclint:-syntax")
+
+        options.author()
+        options.splitIndex()
+        options.serialWarn()
+
+        options.links(
+                "http://docs.oracle.com/javase/8/docs/api/",
+                "http://docs.spring.io/spring/docs/current/javadoc-api/"
+        )
+    }
+
+
+    task sourcesJar(type: Jar, dependsOn: classes) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    task groovydocJar(type: Jar, dependsOn: groovydoc) {
+        classifier = 'javadoc'
+        from 'build/docs/groovydoc'
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+
+                artifact sourcesJar {
+                    classifier "sources"
+                }
+                artifact groovydocJar {
+                    classifier "javadoc"
+                }
+            }
+        }
+    }
+
+}
