@@ -1,6 +1,7 @@
 package corebox.plugin.gradle.server
 
 import corebox.plugin.gradle.server.extension.CBGServerExtension
+import groovy.transform.Memoized
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
@@ -18,6 +19,14 @@ import java.security.MessageDigest
 final class CBGServers {
     private CBGServers() {
     }
+
+    @Memoized
+    static Properties getPluginProperties() {
+        Properties properties = new Properties()
+        properties.load(CBGServers.class.getResourceAsStream('/gradle-corebox-server-plugin.properties') as InputStream)
+        properties
+    }
+
 
     /**
      * 获取 war plugin 实例，不存在则抛出异常

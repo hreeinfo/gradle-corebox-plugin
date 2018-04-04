@@ -79,7 +79,7 @@ class CBGVaadinUpdateAddonStylesTask extends DefaultTask {
             importer.add('com.vaadin.server.themeutils.SASSAddonImportFileCreator')
             importer.add(it.canonicalPath)
 
-            Process process = importer.execute([], project.buildDir)
+            Process process = importer.execute(CBGs.getSystemEnvs(), project.buildDir)
 
             CBGs.logProcess(project, process, getLogToConsole(), 'addon-style-updater.log') { true }
 

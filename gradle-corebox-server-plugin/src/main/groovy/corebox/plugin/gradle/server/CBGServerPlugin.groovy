@@ -4,10 +4,12 @@ import corebox.plugin.gradle.server.extension.CBGServerExtension
 import corebox.plugin.gradle.server.task.CBGServerBaseTask
 import corebox.plugin.gradle.server.task.CBGServerRunTask
 import corebox.plugin.gradle.server.task.CBGServerStopTask
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.WarPlugin
+import org.gradle.api.tasks.SourceSetOutput
 
 /**
  *
@@ -31,7 +33,7 @@ class CBGServerPlugin implements Plugin<Project> {
     static final String EMBED_SERVER_MODULE_PAYARA = "commons-embed-server-payara"
     static final String EMBED_SERVER_MODULE_PAYARA_CLASS = "com.hreeinfo.commons.embed.server.support.EmbedPayaraServer"
 
-    static final String EMBED_SERVER_DEFAULT_VERSION = "0.1"
+    static final String EMBED_SERVER_DEFAULT_VERSION = "0.1.1"
 
     static final String EMBED_SERVER_DEFAULT_TYPE = "JETTY"
     static final String EMBED_SERVER_DEFAULT_TYPE_CLASS = EMBED_SERVER_MODULE_JETTY_CLASS
@@ -72,6 +74,10 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("workingdir") { spe.workingdir }
             conventionMapping.map("configfile") { spe.configfile }
             conventionMapping.map("loglevel") { spe.loglevel }
+
+            conventionMapping.map("logToConsole") { spe.logToConsole }
+            conventionMapping.map("jvmArgs") { spe.jvmArgs }
+
             conventionMapping.map("classesdirs") { spe.classesdirs }
             conventionMapping.map("resourcesdirs") { spe.resourcesdirs }
             conventionMapping.map("options") { findEmbedServerTypeOptions(spe) }
@@ -92,10 +98,7 @@ class CBGServerPlugin implements Plugin<Project> {
                     return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
                 }
             }
-            conventionMapping.map("classesDirectory") {
-                File acd = (project.sourceSets.main.output.classesDirs != null) ? project.sourceSets.main.output.classesDirs.first() : null
-                (acd != null && acd.exists()) ? acd : null
-            }
+            conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
         }
 
 
@@ -111,7 +114,10 @@ class CBGServerPlugin implements Plugin<Project> {
             if (!embedServerType) embedServerType = EMBED_SERVER_DEFAULT_TYPE
 
             String embedServerVersion = spe.version
-            if (!embedServerVersion) embedServerVersion = EMBED_SERVER_DEFAULT_VERSION
+            if (!embedServerVersion) {
+                embedServerVersion = CBGServers.getPluginProperties().getProperty('embed_server.defaultVersion')
+                if (!embedServerVersion) embedServerVersion = EMBED_SERVER_DEFAULT_VERSION
+            }
 
             project.logger.info "启动服务器 ${embedServerType}=${embedServerVersion}"
 
@@ -135,6 +141,26 @@ class CBGServerPlugin implements Plugin<Project> {
 
         project.beforeEvaluate { proj ->
             // TODO 增加依赖解析机制
+        }
+    }
+
+    @SuppressWarnings("GrDeprecatedAPIUsage")
+    private static FileCollection getMainSourceSetOutputClassesDir(Project project) {
+        if (!project) return null
+        SourceSetOutput output = project.sourceSets.main.output
+        if (!output) return null
+        String version = project.gradle.gradleVersion
+        String majorVersion = StringUtils.substringBefore(version, '.')
+
+        int mver = 0
+        try {
+            mver = Integer.parseInt(majorVersion)
+        } catch (Throwable ignored) {
+        }
+        if (mver > 0 && mver < 4) {
+            return project.files(output.classesDir)
+        } else {
+            return output.classesDirs.any { it.exists() } ? output.classesDirs : null
         }
     }
 

@@ -6,6 +6,8 @@ import corebox.plugin.gradle.server.CBGServers
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.*
 
+import java.nio.charset.Charset
+
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -60,11 +62,19 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
     @Input
     @Optional
-    Boolean LogToConsole = Boolean.TRUE
+    Boolean logToConsole = Boolean.TRUE
+
+    @Input
+    @Optional
+    String logCharset = Charset.defaultCharset().name()
 
     @Input
     @Optional
     List<String> jvmArgs = []
+
+    @Input
+    @Optional
+    List<String> processEnvs = []
 
     CBGServerBaseTask() {
         outputs.upToDateWhen { false }
@@ -76,14 +86,24 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
         process = this.executeServerProcess()
 
+        Charset lccs = null
+        try {
+            lccs = Charset.forName(this.getLogCharset())
+        } catch (Throwable ignored) {
+            def dfcs = Charset.defaultCharset()
+            project.logger.error("设置的 log charset: ${this.getLogCharset()} 无效，将使用系统默认值 ${dfcs}")
+        }
+
+        if (lccs == null) lccs = Charset.defaultCharset()
+
         if (this.getDaemon()) {
-            CBGs.logProcess(project, process, false, true, "embed-server-${this.getType()}.log") { String line ->
+            CBGs.logProcess(project, process, false, lccs.name(), "embed-server-${this.getType()}.log") { String line ->
                 true
             }
 
             logger.quiet "${this.getType()} 启动完成并在后台运行 如需关闭服务请执行 appStop 命令"
         } else {
-            CBGs.logProcess(project, process, this.getLogToConsole(), true, "embed-server-${this.getType()}.log") { String line ->
+            CBGs.logProcess(project, process, this.getLogToConsole(), lccs.name(), "embed-server-${this.getType()}.log") { String line ->
                 true
             }
 
@@ -141,9 +161,17 @@ abstract class CBGServerBaseTask extends DefaultTask {
             compileProcess += ["--option=${o}"]
         }
 
-        project.logger.info "Server 执行命令 ${compileProcess.toString()}"
 
-        return compileProcess.execute([], this.project.buildDir)
+        List<String> sysenvs = []
+
+        if (this.getProcessEnvs()) sysenvs += this.getProcessEnvs()
+        List<String> dsenvs = CBGs.getSystemEnvs()
+        if (dsenvs) sysenvs += dsenvs
+
+        project.logger.info "Server 执行命令 ${compileProcess}"
+        project.logger.debug "Server 环境变量 ${sysenvs}"
+
+        return compileProcess.execute(sysenvs, this.project.buildDir)
     }
 
     /**

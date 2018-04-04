@@ -1,5 +1,6 @@
 package corebox.plugin.gradle.server.task
 
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
@@ -21,9 +22,9 @@ class CBGServerRunTask extends CBGServerBaseTask {
     @InputFiles
     FileCollection webAppClasspath
 
-    @InputDirectory
+    @InputFiles
     @Optional
-    File classesDirectory
+    FileCollection classesDirectories
 
     @Override
     protected String getProcessWebapp() {
@@ -45,9 +46,11 @@ class CBGServerRunTask extends CBGServerBaseTask {
     @Override
     protected Set<String> getProcessClassesdirs() {
         Set<String> os = super.getProcessClassesdirs()
-        if (this.getClassesDirectory()) {
+        if (this.getClassesDirectories()) {
             if (!os) os = new LinkedHashSet<>()
-            os.add(this.getClassesDirectory().canonicalPath)
+            this.getClassesDirectories().each { File f ->
+                os.add(f.canonicalPath)
+            }
         }
         return os
     }
@@ -56,11 +59,17 @@ class CBGServerRunTask extends CBGServerBaseTask {
     protected Set<String> getProcessOptions() {
         Set<String> os = super.getProcessOptions()
 
-        if (this.getClassesDirectory()) {
+        if (this.getClassesDirectories()) {
             if (!os) os = new LinkedHashSet<>()
-            os.add("classes_dir:${this.getClassesDirectory().canonicalPath}")
-        }
 
+            String cds = ""
+
+            this.getClassesDirectories().each { File f ->
+                if (f) cds = (StringUtils.isNotBlank(cds)) ? "${cds};${f.canonicalPath}" : "${f.canonicalPath}"
+            }
+
+            os.add("classes_dir:${cds}")
+        }
         return os
     }
 }

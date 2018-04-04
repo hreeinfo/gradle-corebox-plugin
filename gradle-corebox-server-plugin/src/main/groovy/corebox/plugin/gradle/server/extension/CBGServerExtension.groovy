@@ -2,6 +2,8 @@ package corebox.plugin.gradle.server.extension
 
 import corebox.plugin.gradle.server.CBGServerPlugin
 
+import java.nio.charset.Charset
+
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -11,14 +13,13 @@ import corebox.plugin.gradle.server.CBGServerPlugin
 class CBGServerExtension {
 
     String type = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE
-    String version = CBGServerPlugin.EMBED_SERVER_DEFAULT_VERSION
+    String version
     Integer port = 8080
     Boolean daemon = Boolean.FALSE
     String context = "/"
     File webapp
     File workingdir
     File configfile
-    String loglevel = "INFO"
 
     List<String> classesdirs = []
     List<String> resourcesdirs = []
@@ -27,6 +28,13 @@ class CBGServerExtension {
 
     Boolean explode = Boolean.TRUE
     String explodePath = null
+
+    String loglevel = "INFO"
+    Boolean logToConsole = Boolean.TRUE
+    String logCharset = Charset.defaultCharset().name()
+
+    List<String> jvmArgs = []
+    List<String> envs = []
 
     /**
      * 所需服务的类型 可选值： JETTY TOMCAT PAYARA
@@ -40,8 +48,7 @@ class CBGServerExtension {
     }
 
     void version(String version) {
-        if (version) this.version = version
-        else this.version = CBGServerPlugin.EMBED_SERVER_DEFAULT_VERSION
+        this.version = version
     }
 
     /**
@@ -187,7 +194,7 @@ class CBGServerExtension {
      */
     void explode(Boolean exp) {
         if (exp != null) this.explode = exp
-        else explode = Boolean.TRUE
+        else this.explode = Boolean.TRUE
     }
 
     /**
@@ -202,5 +209,25 @@ class CBGServerExtension {
             this.explode = Boolean.FALSE
             this.explodePath = null
         }
+    }
+
+    void logToConsole(Boolean logToConsole) {
+        if (logToConsole != null) this.logToConsole = logToConsole
+        else this.logToConsole = Boolean.TRUE
+    }
+
+    void logCharset(String charset) {
+        if (charset) this.logCharset = charset
+        else this.logCharset = Charset.defaultCharset().name()
+    }
+
+    void jvmArg(String jvmArg) {
+        if (this.jvmArgs == null) this.jvmArgs = []
+        if (jvmArg) this.jvmArgs.add(jvmArg)
+    }
+
+    void env(String env) {
+        if (this.envs == null) this.envs = []
+        if (env) this.envs.add(env)
     }
 }

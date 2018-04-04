@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 plugins {
     id 'groovy'
     id 'maven'
@@ -10,11 +12,34 @@ dependencies {
 
     compile(project(":gradle-corebox-common-plugin"))
 
-    // Tomcat application server
     compileOnly("com.hreeinfo.commons:commons-embed-server:${version_common_embed_server}")
-    //compile("com.hreeinfo.commons:commons-embed-server-tomcat:${version_common_embed_server}")
-    //compile("com.hreeinfo.commons:commons-embed-server-jetty:${version_common_embed_server}")
-    //compile("com.hreeinfo.commons:commons-embed-server-payara:${version_common_embed_server}")
+}
+
+processResources {
+    inputs.property('version', project.version)
+    inputs.property('version_common_embed_server', "${version_common_embed_server}")
+
+    from(sourceSets.main.resources.srcDirs){
+        filesMatching("/gradle-corebox-server-plugin.properties"){
+            filter(ReplaceTokens, tokens: [
+                    'version': project.version.toString(),
+                    version_common_embed_server: "${version_common_embed_server}".toString()
+            ])
+        }
+    }
+}
+
+
+jar {
+    manifest{
+        attributes(
+                "Vaadin-Package-Version": 1,
+                "Vaadin-License-Title": "Apache 2.0",
+                "Implementation-Title": "Corebox Server Plugin for Gradle",
+                "Implementation-Version": version,
+                "Implementation-Vendor": "xingxiuyi",
+        )
+    }
 }
 
 idea {

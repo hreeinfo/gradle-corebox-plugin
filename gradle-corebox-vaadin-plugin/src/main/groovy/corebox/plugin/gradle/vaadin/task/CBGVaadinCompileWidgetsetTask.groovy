@@ -145,7 +145,7 @@ class CBGVaadinCompileWidgetsetTask extends DefaultTask {
 
         widgetsetCompileProcess += widgetset
 
-        Process process = widgetsetCompileProcess.execute([], project.buildDir)
+        Process process = widgetsetCompileProcess.execute(CBGs.getSystemEnvs(), project.buildDir)
         boolean failed = false
         CBGs.logProcess(project, process, getLogToConsole(), 'widgetset-compile.log') { String output ->
             // Monitor 错误日志

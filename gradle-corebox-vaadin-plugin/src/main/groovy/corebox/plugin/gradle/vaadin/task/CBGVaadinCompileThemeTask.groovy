@@ -191,7 +191,8 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
         compileProcess += [CLASSPATH_SWITCH, CBGVaadins.getCompileClassPathOrJar(project, this.getUseClasspathJar()).asPath]
         compileProcess += "com.vaadin.sass.SassCompiler"
         compileProcess += [themeDir.canonicalPath, targetCSSFile.canonicalPath]
-        compileProcess.execute([], project.buildDir)
+
+        compileProcess.execute(CBGs.getSystemEnvs(), project.buildDir)
     }
 
     protected Process executeLibSassCompiler(File themeDir, File unpackedThemesDir) {
@@ -212,7 +213,7 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
 
         logger.debug compileProcess.toString()
 
-        compileProcess.execute([], project.buildDir)
+        compileProcess.execute(CBGs.getSystemEnvs(), project.buildDir)
     }
 
     /**

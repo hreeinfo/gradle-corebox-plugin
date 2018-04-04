@@ -4,6 +4,7 @@ import groovy.transform.Memoized
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Project
 
+import java.nio.charset.Charset
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -42,7 +43,7 @@ class CBGs {
      * @param monitor
      */
     static void logProcess(Project project, Process process, boolean logToConsole, String filename, Closure monitor) {
-        logProcess(project, process, logToConsole, false, filename, monitor)
+        logProcess(project, process, logToConsole, null, filename, monitor)
     }
 
     /**
@@ -54,11 +55,13 @@ class CBGs {
      * @param filename
      * @param monitor
      */
-    static void logProcess(Project project, Process process, boolean logToConsole, boolean directPrint, String filename, Closure monitor) {
+    static void logProcess(Project project, Process process, boolean logToConsole,
+                           String charset, String filename, Closure monitor) {
+        if (!charset) charset = Charset.defaultCharset().name()
         if (logToConsole) {
-            logProcessToConsole(project, process, directPrint, monitor)
+            logProcessToConsole(project, process, charset, monitor)
         } else {
-            logProcessToFile(project, process, directPrint, filename, monitor)
+            logProcessToFile(project, process, charset, filename, monitor)
         }
     }
 
@@ -69,8 +72,8 @@ class CBGs {
      * @param filename
      * @param monitor
      */
-    static void logProcessToFile(final Project project, final Process process, final boolean directPrint,
-                                 final String filename, Closure monitor = {}) {
+    static void logProcessToFile(final Project project, final Process process,
+                                 final String charset, final String filename, Closure monitor = {}) {
         File logDir = project.file("$project.buildDir/logs/")
         logDir.mkdirs()
 
@@ -80,28 +83,12 @@ class CBGs {
         THREAD_POOL.submit {
             LOGFILE.withWriterAppend { out ->
                 try {
-                    boolean errorOccurred = false
-
-                    process.inputStream.eachLine { output ->
+                    process.inputStream.eachLine(charset) { output ->
                         monitor.call(output)
-
-                        if (directPrint) {
-                            out.println output
-                            out.flush()
-                        } else {
-                            if (output.contains(WARNING_LOG_MARKER)) out.println WARNING_LOG_MARKER + SPACE + output.replace(WARNING_LOG_MARKER, '').trim()
-                            else if (output.contains(ERROR_LOG_MARKER)) {
-                                errorOccurred = true
-                                out.println ERROR_LOG_MARKER + SPACE + output.replace(ERROR_LOG_MARKER, '').trim()
-                            } else out.println INFO_LOG_MARKER + SPACE + output.trim()
-
-
-                            out.flush()
-                            // 错误发生时 记录所有信息到控制台
-                            if (errorOccurred) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
-                        }
-
-
+                        out.println output
+                        out.flush()
+                        // 错误发生时 记录所有信息到控制台
+                        if (output.contains(ERROR_LOG_MARKER))  project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
                     }
                 } catch (IOException e) {
                     project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
@@ -112,9 +99,9 @@ class CBGs {
         THREAD_POOL.submit {
             LOGFILE.withWriterAppend { out ->
                 try {
-                    process.errorStream.eachLine { output ->
+                    process.errorStream.eachLine(charset) { output ->
                         monitor.call(output)
-                        out.println ERROR_LOG_MARKER + SPACE + output.replace(ERROR_LOG_MARKER, '').trim()
+                        out.println output
                         out.flush()
                     }
                 } catch (IOException e) {
@@ -130,26 +117,18 @@ class CBGs {
      * @param process
      * @param monitor
      */
-    static void logProcessToConsole(final Project project, final Process process, final boolean directPrint,
-                                    final Closure monitor = {}) {
+    static void logProcessToConsole(final Project project, final Process process,
+                                    final String charset, final Closure monitor = {}) {
         project.logger.info("记录日志到控制台")
 
         THREAD_POOL.submit {
             try {
-                boolean errorOccurred = false
-                process.inputStream.eachLine { output ->
+                process.inputStream.eachLine(charset) { output ->
                     monitor.call(output)
 
-                    if (directPrint) {
-                        println output
-                    } else {
-                        if (output.contains(WARNING_LOG_MARKER)) project.logger.warn(output.replace(WARNING_LOG_MARKER, '').trim())
-                        else if (output.contains(ERROR_LOG_MARKER)) errorOccurred = true
-                        else project.logger.info(output.trim())
-                        // 错误发生时 记录所有信息到控制台
-                        if (errorOccurred) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
-                    }
+                    println output
 
+                    if (output.contains(ERROR_LOG_MARKER)) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
                 }
             } catch (IOException e) {
                 project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
@@ -158,7 +137,7 @@ class CBGs {
 
         THREAD_POOL.submit {
             try {
-                process.errorStream.eachLine { String output ->
+                process.errorStream.eachLine(charset) { String output ->
                     monitor.call(output)
                     project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
                 }
@@ -199,5 +178,24 @@ class CBGs {
 
     static String convertFQNToFilePath(String fqn, String postfix = '') {
         fqn.replace(DOT, File.separator) + postfix
+    }
+
+    /**
+     * 返回系统变量 此方法不会返回空 如未定义系统变量则返回 []
+     * @return
+     */
+    static List<String> getSystemEnvs() {
+        List<String> senvs = []
+        try {
+            Map<String,String> envs = System.getenv()
+            if (!envs) return senvs
+
+            envs.each {k, v ->
+                if (k) senvs.add("${k}=${v}")
+            }
+        } catch (Throwable ignored) {
+        }
+
+        return senvs
     }
 }
