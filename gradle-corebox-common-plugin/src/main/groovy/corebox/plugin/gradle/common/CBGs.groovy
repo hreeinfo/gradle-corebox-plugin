@@ -29,11 +29,12 @@ class CBGs {
     private static final String INFO_LOG_MARKER = '[INFO]'
     private static final String STREAM_CLOSED_LOG_MESSAGE = 'Stream was closed'
 
-
     private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(1)
     static final Executor THREAD_POOL = Executors.newCachedThreadPool({ Runnable r ->
         new Thread(r, "gradle-corebox-plugin-thread-${THREAD_COUNTER.getAndIncrement()}")
     })
+
+    static final String ENV_COREBOX_JAVA_HOME = "COREBOX_JAVA_HOME"
 
     /**
      * 针对进程做日志记录
@@ -88,7 +89,7 @@ class CBGs {
                         out.println output
                         out.flush()
                         // 错误发生时 记录所有信息到控制台
-                        if (output.contains(ERROR_LOG_MARKER))  project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
+                        if (output.contains(ERROR_LOG_MARKER)) project.logger.error(output.replace(ERROR_LOG_MARKER, '').trim())
                     }
                 } catch (IOException e) {
                     project.logger.debug(STREAM_CLOSED_LOG_MESSAGE, e)
@@ -150,15 +151,24 @@ class CBGs {
     /**
      * 返回JavaBinary
      *
+     * 可以定义目标全局环境变量 COREBOX_JAVA_HOME 指向独立java环境
+     *
+     * 如未定义 分别查找 org.gradle.java.home 和 java.home
+     *
      * @return
      */
     @Memoized
     static String getJavaBinary(Project project) {
-        String javaHome
-        if (project.hasProperty(GRADLE_HOME)) {
-            javaHome = project.properties[GRADLE_HOME]
-        } else if (System.getProperty(JAVA_HOME)) {
-            javaHome = System.getProperty(JAVA_HOME)
+        String javaHome = System.getenv(ENV_COREBOX_JAVA_HOME)
+
+        if (!javaHome) {
+            if (System.hasProperty(ENV_COREBOX_JAVA_HOME)) {
+                javaHome = System.getProperty(ENV_COREBOX_JAVA_HOME)
+            } else if (project.hasProperty(GRADLE_HOME)) {
+                javaHome = project.properties[GRADLE_HOME]
+            } else if (System.getProperty(JAVA_HOME)) {
+                javaHome = System.getProperty(JAVA_HOME)
+            }
         }
 
         if (javaHome) {
@@ -187,10 +197,10 @@ class CBGs {
     static List<String> getSystemEnvs() {
         List<String> senvs = []
         try {
-            Map<String,String> envs = System.getenv()
+            Map<String, String> envs = System.getenv()
             if (!envs) return senvs
 
-            envs.each {k, v ->
+            envs.each { k, v ->
                 if (k) senvs.add("${k}=${v}")
             }
         } catch (Throwable ignored) {

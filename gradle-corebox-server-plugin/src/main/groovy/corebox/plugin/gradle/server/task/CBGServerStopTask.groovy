@@ -20,7 +20,7 @@ class CBGServerStopTask extends DefaultTask {
 
 
     @TaskAction
-    void stop() {
+    void execStop() {
         CBGServers.forceDeleteServerLockFile(this.project)
         logger.quiet "服务器停止命令已提交"
     }

@@ -11,7 +11,6 @@ import java.nio.charset.Charset
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerExtension {
-
     String type = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE
     String version
     Integer port = 8080
@@ -32,6 +31,9 @@ class CBGServerExtension {
     String loglevel = "INFO"
     Boolean logToConsole = Boolean.TRUE
     String logCharset = Charset.defaultCharset().name()
+
+    Integer debugPort = 9999
+    String debugConfig = null
 
     List<String> jvmArgs = []
     List<String> envs = []
@@ -125,7 +127,7 @@ class CBGServerExtension {
      */
     void classesdir(String classesdir) {
         if (this.classesdirs == null) this.classesdirs = []
-        this.classesdirs.add(classesdir)
+        if (classesdir) this.classesdirs.add(classesdir)
     }
 
     /**
@@ -134,7 +136,7 @@ class CBGServerExtension {
      */
     void classesdir(File classesdir) {
         if (this.classesdirs == null) this.classesdirs = []
-        this.classesdirs.add(classesdir.getAbsolutePath())
+        if (classesdir != null) this.classesdirs.add(classesdir.getAbsolutePath())
     }
 
     /**
@@ -146,7 +148,7 @@ class CBGServerExtension {
      */
     void resourcedir(String resourcedir) {
         if (this.resourcesdirs == null) this.resourcesdirs = []
-        this.resourcesdirs.add(resourcedir)
+        if (resourcedir) this.resourcesdirs.add(resourcedir)
     }
 
     /**
@@ -158,7 +160,7 @@ class CBGServerExtension {
      */
     void resourcedir(File resourcedir) {
         if (this.resourcesdirs == null) this.resourcesdirs = []
-        this.resourcesdirs.add(resourcedir.getAbsolutePath())
+        if (resourcedir != null) this.resourcesdirs.add(resourcedir.getAbsolutePath())
     }
 
     /**
@@ -211,21 +213,71 @@ class CBGServerExtension {
         }
     }
 
+    /**
+     * log日志是否输出到控制台
+     *
+     * 当值为false时，输出内容至build/log目录中
+     * @param logToConsole
+     */
     void logToConsole(Boolean logToConsole) {
         if (logToConsole != null) this.logToConsole = logToConsole
         else this.logToConsole = Boolean.TRUE
     }
 
+    /**
+     * 日志文件的 charset 默认为系统编码
+     *
+     * 针对于 windows 系统，需要根据实际情况调整此编码以便输出正确的文件
+     * @param charset
+     */
     void logCharset(String charset) {
         if (charset) this.logCharset = charset
         else this.logCharset = Charset.defaultCharset().name()
     }
 
+    /**
+     * 调试器端口 用于外部IDE调试器的连接
+     * @param debugPort
+     */
+    void debugPort(Integer debugPort) {
+        if (debugPort != null && debugPort > 0) this.debugPort = debugPort
+    }
+
+    /**
+     * 调试器配合 此项设置后将会替换默认的调试器启动参数
+     *
+     * 默认值为
+     *
+     * <pre>
+     *  -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9999
+     * </pre>
+     *
+     * 当值以 -Xrunjdwp 开头则会以该值作为完整debug配置，否则仅增加参数
+     * @param debugConfig
+     */
+    void debugConfig(String debugConfig) {
+        this.debugConfig = debugConfig
+    }
+
+    /**
+     * java 运行 server 时所使用的 args 参数，需符合java args定义
+     *
+     * 可多次调用 每次调用给定的参数均附加至 args 中
+     * @param jvmArg
+     */
     void jvmArg(String jvmArg) {
         if (this.jvmArgs == null) this.jvmArgs = []
         if (jvmArg) this.jvmArgs.add(jvmArg)
     }
 
+    /**
+     * 设置 server 运行时对应的 环境变量
+     *
+     * 可多次调用 每次调用给定的变量均附加至 envs 中
+     *
+     * 注意 环境变量定义格式应为 key=value
+     * @param env
+     */
     void env(String env) {
         if (this.envs == null) this.envs = []
         if (env) this.envs.add(env)

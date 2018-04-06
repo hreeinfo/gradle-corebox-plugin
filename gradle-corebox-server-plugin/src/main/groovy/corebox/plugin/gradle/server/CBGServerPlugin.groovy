@@ -2,6 +2,8 @@ package corebox.plugin.gradle.server
 
 import corebox.plugin.gradle.server.extension.CBGServerExtension
 import corebox.plugin.gradle.server.task.CBGServerBaseTask
+import corebox.plugin.gradle.server.task.CBGServerReloadTask
+import corebox.plugin.gradle.server.task.CBGServerRunDebugTask
 import corebox.plugin.gradle.server.task.CBGServerRunTask
 import corebox.plugin.gradle.server.task.CBGServerStopTask
 import org.apache.commons.lang3.StringUtils
@@ -90,20 +92,31 @@ class CBGServerPlugin implements Plugin<Project> {
 
 
             conventionMapping.map("webapp") { CBGServers.appRunWebappDir(project, spe) }
-            conventionMapping.map("webAppClasspath") {
-                if (spe.explode) {
-                    FileCollection runtimeClasspath = project.files()
-                    return runtimeClasspath
-                } else {
-                    return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
-                }
-            }
+            conventionMapping.map("webAppClasspath") { CBGServers.appRunWebAppClasspath(project, spe) }
+            conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
+        }
+
+        project.tasks.create(name: CBGServerRunDebugTask.NAME, group: TASK_GROUP, type: CBGServerRunDebugTask) {
+            description = "运行appserver (DEBUG模式)"
+            dependsOn TASK_EXPLODE_WAR_NAME
+
+
+            conventionMapping.map("debugPort") { spe.debugPort }
+            conventionMapping.map("debugConfig") { spe.debugConfig }
+
+            conventionMapping.map("webapp") { CBGServers.appRunWebappDir(project, spe) }
+            conventionMapping.map("webAppClasspath") { CBGServers.appRunWebAppClasspath(project, spe) }
             conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
         }
 
 
         project.tasks.create(name: CBGServerStopTask.NAME, group: TASK_GROUP, type: CBGServerStopTask) {
             description = "停止appserver"
+        }
+
+
+        project.tasks.create(name: CBGServerReloadTask.NAME, group: TASK_GROUP, type: CBGServerReloadTask) {
+            description = "重载appserver 对应的 webapp context"
         }
     }
 

@@ -82,6 +82,17 @@ final class CBGServers {
         }
     }
 
+    static FileCollection appRunWebAppClasspath(Project project, CBGServerExtension spe) {
+        if (project == null || spe == null) return null
+
+        if (spe.explode) {
+            FileCollection runtimeClasspath = project.files()
+            return runtimeClasspath
+        } else {
+            return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
+        }
+    }
+
     /**
      * 获取 目标目录
      *
@@ -134,11 +145,30 @@ final class CBGServers {
         return new File(tmpDir, ".cbserver.lock")
     }
 
+    static File runningServerReloadLockFile(Project project) {
+        if (!project) return null
+
+        File tmpDir = new File(project.getBuildDir(), "tmp")
+        if (!tmpDir.exists()) tmpDir.mkdirs()
+
+        return new File(tmpDir, ".cbserver.reload.lock")
+    }
+
     static void forceDeleteServerLockFile(Project project) {
         if (!project) return
         try {
             File lockfile = runningServerLockFile(project)
             if (lockfile == null) lockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.lock")
+            if (lockfile.exists()) lockfile.delete()
+        } catch (Throwable ignored) {
+        }
+    }
+
+    static void forceDeleteServerReloadLockFile(Project project) {
+        if (!project) return
+        try {
+            File lockfile = runningServerReloadLockFile(project)
+            if (lockfile == null) lockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.reload.lock")
             if (lockfile.exists()) lockfile.delete()
         } catch (Throwable ignored) {
         }

@@ -115,14 +115,14 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
 
     protected Process executeServerProcess() {
+        List compileProcess = [CBGs.getJavaBinary(this.project)]
+
         String tc = this.getTypeClass()
         if (!tc) tc = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE_CLASS
 
+        Set<String> pjargs = this.getProcessJvmArgs()
 
-        List compileProcess = [CBGs.getJavaBinary(this.project)]
-        if (this.getJvmArgs()) {
-            compileProcess += this.getJvmArgs() as List
-        }
+        if (pjargs) compileProcess += this.getProcessJvmArgs()
 
         compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
         compileProcess += [CLASSPATH_SWITCH, this.project.configurations[CBGServerPlugin.SERVER_EXTENSION_NAME].asPath]
@@ -144,6 +144,13 @@ abstract class CBGServerBaseTask extends DefaultTask {
         if (pLockfile == null) pLockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.lock")
 
         compileProcess += ["--lockfile=${pLockfile.canonicalPath}"]
+
+
+        File pReloadLockfile = CBGServers.forceDeleteServerReloadLockFile(project)
+        if (pReloadLockfile == null) pReloadLockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.reload.lock")
+
+        compileProcess += ["--reloadLockfile=${pReloadLockfile.canonicalPath}"]
+
 
         this.getProcessClassesdirs().each { String s ->
             compileProcess += ["--classesdir=${s}"]
@@ -216,6 +223,18 @@ abstract class CBGServerBaseTask extends DefaultTask {
      * @return
      */
     protected abstract Set<String> getProcessServerClasspaths()
+
+    protected Set<String> getProcessJvmArgs() {
+        if (!this.getJvmArgs()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+
+        this.getJvmArgs().each { String s ->
+            if (s) os.add(s)
+        }
+
+        return os
+    }
 
     protected Set<String> getProcessClassesdirs() {
         if (!this.getClassesdirs()) return []
