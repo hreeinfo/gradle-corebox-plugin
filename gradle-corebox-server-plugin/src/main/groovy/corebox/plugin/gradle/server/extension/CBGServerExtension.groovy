@@ -15,6 +15,7 @@ class CBGServerExtension {
     String version
     Integer port = 8080
     Boolean daemon = Boolean.FALSE
+    Boolean hot = Boolean.FALSE
     String context = "/"
     File webapp
     File workingdir
@@ -24,6 +25,8 @@ class CBGServerExtension {
     List<String> resourcesdirs = []
 
     Map<String, String> options = [:]
+
+    Map<String, String> runtimeConfigs = [:]
 
     Boolean explode = Boolean.TRUE
     String explodePath = null
@@ -67,6 +70,17 @@ class CBGServerExtension {
      */
     void daemon(Boolean daemon) {
         this.daemon = daemon
+    }
+
+    /**
+     * hot 模式 监测 classesdir 中的类 实时动态载入变更的类内容 （需要IDE在目录中生成类或者单个项目进行rebuild）
+     *
+     * 如果使用 gradle 生成目标类，可以考虑开启该项目的 增量编译 模式以加快调试速度 此时需要注意的是不要构建web项目
+     *
+     * @param hot
+     */
+    void hot(Boolean hot) {
+        this.hot = hot
     }
 
     /**
@@ -257,6 +271,22 @@ class CBGServerExtension {
      */
     void debugConfig(String debugConfig) {
         this.debugConfig = debugConfig
+    }
+
+    /**
+     * gradle 运行时的特殊配置选项 仅在 gradle 任务中有效
+     *
+     * 目前支持下列配置
+     *
+     * <ul>
+     *     <li> version_springloaded=版本号  - 在hot模式下所使用的agent jar版本 </li>
+     * </ul>
+     * @param key
+     * @param value
+     */
+    void runtimeConfig(String key, String value) {
+        if (this.runtimeConfigs == null) this.runtimeConfigs = [:]
+        if (key != null) this.runtimeConfigs.put(key, value)
     }
 
     /**

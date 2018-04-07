@@ -3,6 +3,7 @@ package corebox.plugin.gradle.server.task
 import corebox.plugin.gradle.common.CBGs
 import corebox.plugin.gradle.server.CBGServerPlugin
 import corebox.plugin.gradle.server.CBGServers
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.*
 
@@ -31,6 +32,10 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
     @Input
     Boolean daemon = Boolean.FALSE
+
+    @Input
+    @Optional
+    Boolean hotReload = Boolean.FALSE
 
     @Input
     @Optional
@@ -120,9 +125,18 @@ abstract class CBGServerBaseTask extends DefaultTask {
         String tc = this.getTypeClass()
         if (!tc) tc = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE_CLASS
 
+        Set<String> alljvmargs = new LinkedHashSet<>()
+
         Set<String> pjargs = this.getProcessJvmArgs()
 
-        if (pjargs) compileProcess += this.getProcessJvmArgs()
+        if (pjargs) alljvmargs.addAll(pjargs)
+
+        if (this.getHotReload()) {
+            Set<String> hotargs = this.getHotReloadAgentJvmArgs()
+            if (hotargs) alljvmargs.addAll(hotargs)
+        }
+
+        if (alljvmargs) compileProcess += alljvmargs
 
         compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
         compileProcess += [CLASSPATH_SWITCH, this.project.configurations[CBGServerPlugin.SERVER_EXTENSION_NAME].asPath]
@@ -270,6 +284,22 @@ abstract class CBGServerBaseTask extends DefaultTask {
             }
         }
 
+        return os
+    }
+
+    protected Set<String> getHotReloadAgentJvmArgs() {
+        Set<String> os = new LinkedHashSet<>()
+
+        File sfjar
+
+        this.project.configurations.getByName(CBGServerPlugin.SERVER_EXTENSION_NAME).files.each { File f ->
+            if (StringUtils.startsWith(f.getName(), "springloaded")) sfjar = f
+        }
+
+        if (sfjar) {
+            os.add("-javaagent:${sfjar.getCanonicalPath()}")
+            os.add("-noverify")
+        }
         return os
     }
 }

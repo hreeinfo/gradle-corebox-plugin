@@ -35,7 +35,9 @@ class CBGServerPlugin implements Plugin<Project> {
     static final String EMBED_SERVER_MODULE_PAYARA = "commons-embed-server-payara"
     static final String EMBED_SERVER_MODULE_PAYARA_CLASS = "com.hreeinfo.commons.embed.server.support.EmbedPayaraServer"
 
-    static final String EMBED_SERVER_DEFAULT_VERSION = "0.1.1"
+    static final String DEFAULT_VERSION_EMBED_SERVER = "0.2"
+    static final String DEFAULT_VERSION_SPRINGLOADED = "1.2.8.RELEASE"
+    static final String RUNTIME_CONFIG_VERSION_SPRINGLOADED = "version_springloaded"
 
     static final String EMBED_SERVER_DEFAULT_TYPE = "JETTY"
     static final String EMBED_SERVER_DEFAULT_TYPE_CLASS = EMBED_SERVER_MODULE_JETTY_CLASS
@@ -47,7 +49,6 @@ class CBGServerPlugin implements Plugin<Project> {
 
         project.configurations.create(SERVER_EXTENSION_NAME).setVisible(false).setTransitive(true)
                 .setDescription("用于 cbserver 运行的库依赖")
-
 
         CBGServerExtension spe = project.extensions.create(SERVER_EXTENSION_NAME, CBGServerExtension.class)
 
@@ -72,6 +73,7 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("typeClass") { findEmbedServerTypeClass(spe.type) }
             conventionMapping.map("port") { spe.port }
             conventionMapping.map("daemon") { spe.daemon }
+            conventionMapping.map("hotReload") { spe.hot }
             conventionMapping.map("context") { spe.context }
             conventionMapping.map("workingdir") { spe.workingdir }
             conventionMapping.map("configfile") { spe.configfile }
@@ -129,7 +131,7 @@ class CBGServerPlugin implements Plugin<Project> {
             String embedServerVersion = spe.version
             if (!embedServerVersion) {
                 embedServerVersion = CBGServers.getPluginProperties().getProperty('embed_server.defaultVersion')
-                if (!embedServerVersion) embedServerVersion = EMBED_SERVER_DEFAULT_VERSION
+                if (!embedServerVersion) embedServerVersion = DEFAULT_VERSION_EMBED_SERVER
             }
 
             project.logger.info "启动服务器 ${embedServerType}=${embedServerVersion}"
@@ -150,8 +152,16 @@ class CBGServerPlugin implements Plugin<Project> {
                     break
             }
 
-        }
+            if (spe.hot) { // 加入 hot reload 模式的依赖库 此处仅应有一个文件
+                String springloadedVersion = spe.runtimeConfigs.get(RUNTIME_CONFIG_VERSION_SPRINGLOADED)
+                if (!springloadedVersion) {
+                    springloadedVersion = CBGServers.getPluginProperties().getProperty('springloaded.defaultVersion')
+                    if (!springloadedVersion) springloadedVersion = DEFAULT_VERSION_SPRINGLOADED
+                }
 
+                project.dependencies.add SERVER_EXTENSION_NAME, "org.springframework:springloaded:${springloadedVersion}"
+            }
+        }
         project.beforeEvaluate { proj ->
             // TODO 增加依赖解析机制
         }
