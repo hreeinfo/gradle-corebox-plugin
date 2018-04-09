@@ -56,14 +56,15 @@ class CBGs {
      * @param filename
      * @param monitor
      */
-    static void logProcess(Project project, Process process, boolean logToConsole,
+    static File logProcess(Project project, Process process, boolean logToConsole,
                            String charset, String filename, Closure monitor) {
         if (!charset) charset = Charset.defaultCharset().name()
         if (logToConsole) {
             logProcessToConsole(project, process, charset, monitor)
         } else {
-            logProcessToFile(project, process, charset, filename, monitor)
+            return logProcessToFile(project, process, charset, filename, monitor)
         }
+        return null
     }
 
     /**
@@ -73,7 +74,7 @@ class CBGs {
      * @param filename
      * @param monitor
      */
-    static void logProcessToFile(final Project project, final Process process,
+    static File logProcessToFile(final Project project, final Process process,
                                  final String charset, final String filename, Closure monitor = {}) {
         File logDir = project.file("$project.buildDir/logs/")
         logDir.mkdirs()
@@ -110,6 +111,7 @@ class CBGs {
                 }
             }
         }
+        return LOGFILE
     }
 
     /**
@@ -161,15 +163,9 @@ class CBGs {
     static String getJavaBinary(Project project) {
         String javaHome = System.getenv(ENV_COREBOX_JAVA_HOME)
 
-        if (!javaHome) {
-            if (System.hasProperty(ENV_COREBOX_JAVA_HOME)) {
-                javaHome = System.getProperty(ENV_COREBOX_JAVA_HOME)
-            } else if (project.hasProperty(GRADLE_HOME)) {
-                javaHome = project.properties[GRADLE_HOME]
-            } else if (System.getProperty(JAVA_HOME)) {
-                javaHome = System.getProperty(JAVA_HOME)
-            }
-        }
+        if (!javaHome && System.hasProperty(ENV_COREBOX_JAVA_HOME)) javaHome = System.getProperty(ENV_COREBOX_JAVA_HOME)
+        if (!javaHome && project.hasProperty(GRADLE_HOME)) javaHome = project.properties[GRADLE_HOME]
+        if (!javaHome) javaHome = System.getProperty(JAVA_HOME)
 
         if (javaHome) {
             File javaBin = new File(javaHome, "bin")
@@ -207,5 +203,78 @@ class CBGs {
         }
 
         return senvs
+    }
+
+    static List<String> runProcess(Project project, List process, String charset) {
+        List<String> values = []
+        if (!process) return values
+        final ProcessResultReader stderr
+        final ProcessResultReader stdout
+
+        try {
+            if (!charset) charset = Charset.defaultCharset().name()
+
+            Process proc = process.execute(getSystemEnvs(), project.getBuildDir())
+            if (!proc) return values
+
+
+            stderr = new ProcessResultReader(proc.getErrorStream(), "STDERR", charset);
+            stdout = new ProcessResultReader(proc.getInputStream(), "STDOUT", charset);
+
+            stderr.start()
+            stdout.start()
+
+            proc.waitFor()
+
+            values.addAll(stdout.output())
+            values.addAll(stderr.output())
+        } catch (Throwable e) {
+            println("运行命令发生错误 ${process} 错误信息为 ${e.getMessage()}")
+        } finally {
+            if (stderr) {
+                try {
+                    if (stderr.isAlive()) stderr.interrupt()
+                } catch (Throwable e) {
+                }
+            }
+
+            if (stdout) {
+                try {
+                    if (stdout.isAlive()) stderr.interrupt()
+                } catch (Throwable e) {
+                }
+            }
+        }
+        return values
+    }
+
+    private static class ProcessResultReader extends Thread {
+        final InputStream is
+        final String type
+        final List<String> sb
+        final String charset
+
+        ProcessResultReader(final InputStream is, String type, String charset) {
+            this.is = is
+            this.type = type
+            this.sb = []
+            this.charset = charset ? charset : Charset.defaultCharset().name()
+        }
+
+        public void run() {
+            try {
+                final InputStreamReader isr = new InputStreamReader(is, charset)
+                final BufferedReader br = new BufferedReader(isr)
+                String line = null
+                while ((line = br.readLine()) != null) {
+                    this.sb.add(line)
+                }
+            } catch (final Throwable ioe) {
+            }
+        }
+
+        public List<String> output() {
+            return this.sb
+        }
     }
 }

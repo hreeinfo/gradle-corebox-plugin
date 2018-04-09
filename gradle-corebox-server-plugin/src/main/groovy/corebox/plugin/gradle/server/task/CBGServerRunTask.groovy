@@ -26,6 +26,30 @@ class CBGServerRunTask extends CBGServerBaseTask {
     @Optional
     FileCollection classesDirectories
 
+    protected void onProcessReady() {
+        String ctxsp = this.getContext()
+
+        String fullctxsp = (StringUtils.startsWith(ctxsp, "/")) ? "${ctxsp}" : "/${ctxsp}"
+        project.logger.quiet("服务器 ${this.getType()} 已启动 访问地址 http://127.0.0.1:${this.getPort()}${fullctxsp}")
+
+        if (this.getHotReload() && this.innerHotReloadType) {
+            project.logger.quiet("已开启热重载模式 ${this.innerHotReloadType}")
+            if (this.getClassesdirs()) {
+                project.logger.quiet("下列路径的 .class 文件变化将热重载：")
+                this.getClassesdirs().each { String s ->
+                    project.logger.quiet("\t> ${project.relativePath(s)}")
+                }
+            }
+        }
+
+        if (this.getResourcesdirs()) {
+            project.logger.quiet("下列路径的 webapp 静态资源文件支持实时修改：")
+            this.getResourcesdirs().each { String s ->
+                project.logger.quiet("\t> ${project.relativePath(s)}")
+            }
+        }
+    }
+
     @Override
     protected String getProcessWebapp() {
         return this.getWebapp().canonicalPath

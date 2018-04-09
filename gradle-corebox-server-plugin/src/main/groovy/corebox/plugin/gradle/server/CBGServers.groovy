@@ -2,6 +2,7 @@ package corebox.plugin.gradle.server
 
 import corebox.plugin.gradle.server.extension.CBGServerExtension
 import groovy.transform.Memoized
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
@@ -26,7 +27,6 @@ final class CBGServers {
         properties.load(CBGServers.class.getResourceAsStream('/gradle-corebox-server-plugin.properties') as InputStream)
         properties
     }
-
 
     /**
      * 获取 war plugin 实例，不存在则抛出异常
@@ -172,5 +172,17 @@ final class CBGServers {
             if (lockfile.exists()) lockfile.delete()
         } catch (Throwable ignored) {
         }
+    }
+
+    static boolean isHotReloadTypeSprintLoaded(String hotReloadType) {
+        if (!hotReloadType) return false
+        hotReloadType = hotReloadType.trim()
+        return StringUtils.equalsIgnoreCase(hotReloadType, CBGServerPlugin.HOT_RELOAD_TYPE_SPTRING_LOADED) || StringUtils.equalsIgnoreCase(hotReloadType, CBGServerPlugin.HOT_RELOAD_TYPE_SPTRING)
+    }
+
+    static boolean isHotReloadTypeHotSwap(String hotReloadType) {
+        if (!hotReloadType) return false
+        hotReloadType = hotReloadType.trim()
+        return StringUtils.equalsIgnoreCase(hotReloadType, CBGServerPlugin.HOT_RELOAD_TYPE_DCEVM) || StringUtils.equalsIgnoreCase(hotReloadType, CBGServerPlugin.HOT_RELOAD_TYPE_HOTSWAP)
     }
 }

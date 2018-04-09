@@ -4,7 +4,6 @@ import org.apache.commons.lang3.StringUtils
 import org.gradle.api.JavaVersion
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
-import org.gradle.util.GradleVersion
 
 /**
  *
@@ -23,17 +22,21 @@ class CBGServerRunDebugTask extends CBGServerRunTask {
 
     @Input
     @Optional
-    Integer debugPort = 9999
+    Integer debugPort = 5005
 
     @Input
     @Optional
     String debugConfig = null
 
-    // TODO 需实现
+    protected void onProcessReady() {
+        super.onProcessReady()
+        project.logger.quiet(" ")
+        project.logger.quiet("已经开启调试模式 远程调试端口 ${this.getDebugPort()} 请在IDE中配置 Remote Debug 选项")
+    }
 
     @Override
-    protected Set<String> getProcessJvmArgs() {
-        Set<String> os = super.getProcessJvmArgs()
+    protected Set<String> getProcessJvmArgs(String javaBinary, JavaVersion javaVersion) {
+        Set<String> os = super.getProcessJvmArgs(javaBinary, javaVersion)
 
         if (!os) os = new LinkedHashSet<>()
 
@@ -52,12 +55,12 @@ class CBGServerRunDebugTask extends CBGServerRunTask {
         }
 
         if (addXdebug) os.add(DAD_FLAG)
-        if (addXrunjdwp) os.add(this.generateXrunjdwp())
+        if (addXrunjdwp) os.add(this.generateXrunjdwp(javaBinary, javaVersion))
 
         return os
     }
 
-    private String generateXrunjdwp() {
+    private String generateXrunjdwp(String javaBinary, JavaVersion javaVersion) {
         String xrun = "${DAC_FLAG}:"
         Map<String, String> map = [:]
 
@@ -81,7 +84,9 @@ class CBGServerRunDebugTask extends CBGServerRunTask {
             xrun = "${xrun}${k}=${v},"
         }
 
-        xrun = "${xrun}${this.generateDebugPortStr()}"
+        String rdport = this.generateDebugPortStr(javaVersion)
+
+        xrun = "${xrun}${rdport}"
 
         return xrun
     }
@@ -95,8 +100,11 @@ class CBGServerRunDebugTask extends CBGServerRunTask {
      *
      * @return
      */
-    private String generateDebugPortStr() {
-        JavaVersion jv = JavaVersion.current()
+    private String generateDebugPortStr(JavaVersion javaVersion) {
+        JavaVersion jv = javaVersion
+
+        if (!jv) jv = JavaVersion.current()
+
         if (jv.isJava9Compatible() || jv.isJava10Compatible()) {
             return "address=*:${this.getDebugPort()}"
         } else {

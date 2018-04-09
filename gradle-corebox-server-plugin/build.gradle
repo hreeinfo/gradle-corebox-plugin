@@ -19,13 +19,15 @@ processResources {
     inputs.property('version', project.version)
     inputs.property('version_common_embed_server', "${version_common_embed_server}")
     inputs.property('version_springloaded', "${version_springloaded}")
+    inputs.property('version_hotswap', "${version_hotswap}")
 
     from(sourceSets.main.resources.srcDirs){
         filesMatching("/gradle-corebox-server-plugin.properties"){
             filter(ReplaceTokens, tokens: [
                     'version': project.version.toString(),
                     version_common_embed_server: "${version_common_embed_server}".toString(),
-                    version_springloaded: "${version_springloaded}".toString()
+                    version_springloaded: "${version_springloaded}".toString(),
+                    version_hotswap: "${version_hotswap}".toString()
             ])
         }
     }

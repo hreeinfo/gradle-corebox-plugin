@@ -1,11 +1,7 @@
 package corebox.plugin.gradle.server
 
 import corebox.plugin.gradle.server.extension.CBGServerExtension
-import corebox.plugin.gradle.server.task.CBGServerBaseTask
-import corebox.plugin.gradle.server.task.CBGServerReloadTask
-import corebox.plugin.gradle.server.task.CBGServerRunDebugTask
-import corebox.plugin.gradle.server.task.CBGServerRunTask
-import corebox.plugin.gradle.server.task.CBGServerStopTask
+import corebox.plugin.gradle.server.task.*
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -36,12 +32,38 @@ class CBGServerPlugin implements Plugin<Project> {
     static final String EMBED_SERVER_MODULE_PAYARA_CLASS = "com.hreeinfo.commons.embed.server.support.EmbedPayaraServer"
 
     static final String DEFAULT_VERSION_EMBED_SERVER = "0.2"
-    static final String DEFAULT_VERSION_SPRINGLOADED = "1.2.8.RELEASE"
-    static final String RUNTIME_CONFIG_VERSION_SPRINGLOADED = "version_springloaded"
 
     static final String EMBED_SERVER_DEFAULT_TYPE = "JETTY"
     static final String EMBED_SERVER_DEFAULT_TYPE_CLASS = EMBED_SERVER_MODULE_JETTY_CLASS
 
+
+    static final String HOT_RELOAD_TYPE_SPTRING = "spring"
+    static final String HOT_RELOAD_TYPE_SPTRING_LOADED = "springloaded"
+    static final String HOT_RELOAD_TYPE_DCEVM = "dcevm"
+    static final String HOT_RELOAD_TYPE_HOTSWAP = "hotswap"
+
+    static final String HOT_RELOAD_TYPE_DEFAULT = HOT_RELOAD_TYPE_HOTSWAP
+
+    static final String HOT_RELOAD_DCEVM_PROP = "cbserver.java.dcevm"
+    static final String HOT_RELOAD_DCEVM_PROP2 = "java.dcevm"
+    static final String HOT_RELOAD_DCEVM_ENV = "COREBOX_JAVA_DCEVM"
+
+    static final String HOT_RELOAD_DCEVM_ARGS_PROP = "cbserver.java.dcevm.args"
+    static final String HOT_RELOAD_DCEVM_ARGS_PROP2 = "java.dcevm.args"
+    static final String HOT_RELOAD_DCEVM_ARGS_ENV = "COREBOX_JAVA_DCEVM_ARGS"
+
+    static final String HOT_RELOAD_DCEVM_ARGS = "-XXaltjvm=dcevm"
+
+    static final String DEFAULT_VERSION_SPRINGLOADED = "1.2.8.RELEASE"
+    static final String RUNTIME_CONFIG_VERSION_SPRINGLOADED = "version_springloaded"
+
+
+    static final String DEFAULT_VERSION_HOTSWAP = "1.2.0"
+    static final String RUNTIME_CONFIG_VERSION_HOTSWAP = "version_hotswap"
+
+    static final String RUNTIME_CONFIG_DCEVM_JVM = "dcevm"
+    static final String RUNTIME_CONFIG_DCEVM_ARGS = "dcevm_args"
+    static final String RUNTIME_CONFIG_HOTSWAP_CONFIG = "hotswap_config"
 
     @Override
     void apply(Project project) {
@@ -73,7 +95,6 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("typeClass") { findEmbedServerTypeClass(spe.type) }
             conventionMapping.map("port") { spe.port }
             conventionMapping.map("daemon") { spe.daemon }
-            conventionMapping.map("hotReload") { spe.hot }
             conventionMapping.map("context") { spe.context }
             conventionMapping.map("workingdir") { spe.workingdir }
             conventionMapping.map("configfile") { spe.configfile }
@@ -85,6 +106,15 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("classesdirs") { spe.classesdirs }
             conventionMapping.map("resourcesdirs") { spe.resourcesdirs }
             conventionMapping.map("options") { findEmbedServerTypeOptions(spe) }
+            conventionMapping.map("runtimeConfigs") { spe.runtimeConfigs }
+
+            // hotReload 配置
+            // TODO DCEVM 配置
+            conventionMapping.map("hotReload") { spe.hot }
+            conventionMapping.map("hotReloadType") { spe.hottype }
+            conventionMapping.map("hotReloadDCEVM") { spe.runtimeConfigs.get(RUNTIME_CONFIG_DCEVM_JVM) }
+            conventionMapping.map("hotReloadDCEVMArgs") { spe.runtimeConfigs.get(RUNTIME_CONFIG_DCEVM_ARGS) }
+
         }
 
 
@@ -153,13 +183,27 @@ class CBGServerPlugin implements Plugin<Project> {
             }
 
             if (spe.hot) { // 加入 hot reload 模式的依赖库 此处仅应有一个文件
-                String springloadedVersion = spe.runtimeConfigs.get(RUNTIME_CONFIG_VERSION_SPRINGLOADED)
-                if (!springloadedVersion) {
-                    springloadedVersion = CBGServers.getPluginProperties().getProperty('springloaded.defaultVersion')
-                    if (!springloadedVersion) springloadedVersion = DEFAULT_VERSION_SPRINGLOADED
-                }
+                if (CBGServers.isHotReloadTypeSprintLoaded(spe.hottype)) {
 
-                project.dependencies.add SERVER_EXTENSION_NAME, "org.springframework:springloaded:${springloadedVersion}"
+                    String springloadedVersion = spe.runtimeConfigs.get(RUNTIME_CONFIG_VERSION_SPRINGLOADED)
+                    if (!springloadedVersion) {
+                        springloadedVersion = CBGServers.getPluginProperties().getProperty('springloaded.defaultVersion')
+                        if (!springloadedVersion) springloadedVersion = DEFAULT_VERSION_SPRINGLOADED
+                    }
+
+                    project.dependencies.add SERVER_EXTENSION_NAME, "org.springframework:springloaded:${springloadedVersion}"
+                } else if (CBGServers.isHotReloadTypeHotSwap(spe.hottype)) {
+                    // HOTSWAP - https://github.com/HotswapProjects/HotswapAgent
+                    // DCEVM   - https://github.com/dcevm/dcevm
+
+                    String hotswapVersion = spe.runtimeConfigs.get(RUNTIME_CONFIG_VERSION_HOTSWAP)
+                    if (!hotswapVersion) {
+                        hotswapVersion = CBGServers.getPluginProperties().getProperty('hotswap.defaultVersion')
+                        if (!hotswapVersion) hotswapVersion = DEFAULT_VERSION_HOTSWAP
+                    }
+
+                    project.dependencies.add SERVER_EXTENSION_NAME, "com.hreeinfo.commons:hotswap-agent:${hotswapVersion}"
+                }
             }
         }
         project.beforeEvaluate { proj ->

@@ -1,6 +1,7 @@
 package corebox.plugin.gradle.server.extension
 
 import corebox.plugin.gradle.server.CBGServerPlugin
+import corebox.plugin.gradle.server.CBGServers
 
 import java.nio.charset.Charset
 
@@ -15,7 +16,7 @@ class CBGServerExtension {
     String version
     Integer port = 8080
     Boolean daemon = Boolean.FALSE
-    Boolean hot = Boolean.FALSE
+
     String context = "/"
     File webapp
     File workingdir
@@ -35,11 +36,14 @@ class CBGServerExtension {
     Boolean logToConsole = Boolean.TRUE
     String logCharset = Charset.defaultCharset().name()
 
-    Integer debugPort = 9999
+    Integer debugPort = 5005
     String debugConfig = null
 
     List<String> jvmArgs = []
     List<String> envs = []
+
+    Boolean hot = Boolean.FALSE
+    String hottype = CBGServerPlugin.HOT_RELOAD_TYPE_DEFAULT
 
     /**
      * 所需服务的类型 可选值： JETTY TOMCAT PAYARA
@@ -81,6 +85,31 @@ class CBGServerExtension {
      */
     void hot(Boolean hot) {
         this.hot = hot
+        if (this.hot) this.hottype = CBGServerPlugin.HOT_RELOAD_TYPE_DEFAULT
+        else this.hottype = null
+    }
+
+    /**
+     * hot 模式 当值为有效值时 设置 hot=true 且 hottype 为给定类型
+     *
+     * 否则打印警告信息
+     *
+     * @param hottype
+     */
+    void hot(String hottype) {
+        if (hottype) {
+            if (CBGServers.isHotReloadTypeSprintLoaded(hottype) || CBGServers.isHotReloadTypeHotSwap(hottype)) {
+                this.hot = true
+                this.hottype = hottype
+            } else {
+                println "错误：您设置的 hottype 值无效，可选值为：[springloaded|hotswap]"
+                this.hot = false
+                this.hottype = null
+            }
+        } else {
+            this.hot = false
+            this.hottype = null
+        }
     }
 
     /**
@@ -279,7 +308,14 @@ class CBGServerExtension {
      * 目前支持下列配置
      *
      * <ul>
-     *     <li> version_springloaded=版本号  - 在hot模式下所使用的agent jar版本 </li>
+     *     <li> version_springloaded=版本号 - 在hot模式下所使用的 springloaded agent jar版本 </li>
+     *     <li> version_hotswap=版本号 - 在hot模式下所使用的 hotswap agent jar版本 </li>
+     *     <li> dcevm=DCEVM_JVM_PATH - 在hot模式下所使用的 dcevm 路径 必须指向最终执行文件 </li>
+     *     <li> dcevm_args=ARG_VALUE  - 在hot模式下所使用的 dcevm args 系统默认值为 -XXaltjvm=dcevm 如果不需要此参数需要强制设置为 none </li>
+     *     <li> hotswap_config=CONFIG_FILE - 在hot模式下所使用的 hotswap 配置文件 </li>
+     *     <li> hotswap_disable_plugins= - 在hot模式下所使用的 hotswap 配置项 </li>
+     *     <li> hotswap_auto= - 在hot模式下所使用的 hotswap  配置项 </li>
+     *     <li> hotswap_logger= - 在hot模式下所使用的 hotswap  配置项 </li>
      * </ul>
      * @param key
      * @param value

@@ -1,4 +1,4 @@
-rootProject.name = "gradle-corebox-plugin"
+rootProject.name = "gradle-corebox-plugin-parent"
 
 include "gradle-corebox-common-plugin"
 include "gradle-corebox-server-plugin"
