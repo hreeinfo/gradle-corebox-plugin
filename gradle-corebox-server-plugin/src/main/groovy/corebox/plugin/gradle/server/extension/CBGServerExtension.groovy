@@ -24,6 +24,7 @@ class CBGServerExtension {
 
     List<String> classesdirs = []
     List<String> resourcesdirs = []
+    List<String> serverClasspaths = []
 
     Map<String, String> options = [:]
 
@@ -41,6 +42,8 @@ class CBGServerExtension {
 
     List<String> jvmArgs = []
     List<String> envs = []
+
+    List<String> blacklistJars = []
 
     Boolean hot = Boolean.FALSE
     String hottype = CBGServerPlugin.HOT_RELOAD_TYPE_DEFAULT
@@ -168,18 +171,20 @@ class CBGServerExtension {
      * 附加的类路径 （当前ClassLoader以外的类路径）
      * @param classesdir
      */
-    void classesdir(String classesdir) {
+    void classesdir(String... classesdir) {
         if (this.classesdirs == null) this.classesdirs = []
-        if (classesdir) this.classesdirs.add(classesdir)
+        if (classesdir) this.classesdirs.addAll(Arrays.asList(classesdir))
     }
 
     /**
      * 附加的类路径 （当前ClassLoader以外的类路径）
      * @param classesdir
      */
-    void classesdir(File classesdir) {
+    void classesdir(File... classesdir) {
         if (this.classesdirs == null) this.classesdirs = []
-        if (classesdir != null) this.classesdirs.add(classesdir.getAbsolutePath())
+        if (classesdir != null) classesdir.each { File f ->
+            this.classesdirs.add(f.getAbsolutePath())
+        }
     }
 
     /**
@@ -189,9 +194,9 @@ class CBGServerExtension {
      *
      * @param resourcedir
      */
-    void resourcedir(String resourcedir) {
+    void resourcedir(String... resourcedir) {
         if (this.resourcesdirs == null) this.resourcesdirs = []
-        if (resourcedir) this.resourcesdirs.add(resourcedir)
+        if (resourcedir) this.resourcesdirs.addAll(Arrays.asList(resourcedir))
     }
 
     /**
@@ -201,9 +206,31 @@ class CBGServerExtension {
      *
      * @param resourcedir
      */
-    void resourcedir(File resourcedir) {
+    void resourcedir(File... resourcedir) {
         if (this.resourcesdirs == null) this.resourcesdirs = []
-        if (resourcedir != null) this.resourcesdirs.add(resourcedir.getAbsolutePath())
+        if (resourcedir != null) resourcedir.each { File f ->
+            this.resourcesdirs.add(f.getAbsolutePath())
+        }
+    }
+
+    /**
+     * 服务器层级的 classpath
+     * @param serverClasspath
+     */
+    void serverClasspath(String... serverClasspath) {
+        if (this.serverClasspaths == null) this.serverClasspaths = []
+        if (serverClasspath) this.serverClasspaths.addAll(Arrays.asList(serverClasspath))
+    }
+
+    /**
+     * 服务器层级的 classpath
+     * @param serverClasspath
+     */
+    void serverClasspath(File... serverClasspath) {
+        if (this.serverClasspaths == null) this.serverClasspaths = []
+        if (serverClasspath != null) serverClasspath.each { File f ->
+            this.serverClasspaths.add(f.getAbsolutePath())
+        }
     }
 
     /**
@@ -331,9 +358,9 @@ class CBGServerExtension {
      * 可多次调用 每次调用给定的参数均附加至 args 中
      * @param jvmArg
      */
-    void jvmArg(String jvmArg) {
+    void jvmArg(String... jvmArg) {
         if (this.jvmArgs == null) this.jvmArgs = []
-        if (jvmArg) this.jvmArgs.add(jvmArg)
+        if (jvmArg) this.jvmArgs.addAll(Arrays.asList(jvmArg))
     }
 
     /**
@@ -344,8 +371,17 @@ class CBGServerExtension {
      * 注意 环境变量定义格式应为 key=value
      * @param env
      */
-    void env(String env) {
+    void env(String... env) {
         if (this.envs == null) this.envs = []
-        if (env) this.envs.add(env)
+        if (env) this.envs.addAll(Arrays.asList(env))
+    }
+
+    /**
+     * 运行环境忽略的jar包 忽略的文件将不会出现在 classpath 中 （ 仅处理 classpath 在 WEB-INF/lib 下的文件仍然存在 ）
+     * @param jarPattern
+     */
+    void blacklistJar(String... jarPatterns) {
+        if (this.blacklistJars == null) this.blacklistJars = []
+        if (jarPatterns) this.blacklistJars.addAll(Arrays.asList(jarPatterns))
     }
 }

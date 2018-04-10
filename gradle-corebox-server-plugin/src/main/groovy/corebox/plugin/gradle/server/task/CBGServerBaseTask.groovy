@@ -11,6 +11,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 
 import java.nio.charset.Charset
+import java.nio.file.Paths
 
 /**
  *
@@ -34,7 +35,12 @@ abstract class CBGServerBaseTask extends DefaultTask {
     Integer port = 8080
 
     @Input
+    @Optional
     Boolean daemon = Boolean.FALSE
+
+    @Input
+    @Optional
+    Boolean explode = Boolean.TRUE
 
     @Input
     @Optional
@@ -78,6 +84,10 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
     @Input
     @Optional
+    List<String> serverClasspaths = []
+
+    @Input
+    @Optional
     Map<String, String> options = [:]
 
     @Input
@@ -95,6 +105,10 @@ abstract class CBGServerBaseTask extends DefaultTask {
     @Input
     @Optional
     List<String> processEnvs = []
+
+    @Input
+    @Optional
+    List<String> blacklistJars = []
 
     @Input
     @Optional
@@ -159,7 +173,9 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
         boolean javaEnableDCE = this.validJavaDCEVM(javaBinary)
 
-        List compileProcess = [javaBinary]
+        List serverProcess = []
+
+        serverProcess.add(javaBinary)
 
         String tc = this.getTypeClass()
         if (!tc) tc = CBGServerPlugin.EMBED_SERVER_DEFAULT_TYPE_CLASS
@@ -175,66 +191,88 @@ abstract class CBGServerBaseTask extends DefaultTask {
             if (hotargs) alljvmargs.addAll(hotargs)
         }
 
-        if (alljvmargs) compileProcess += alljvmargs
+        if (alljvmargs) serverProcess.addAll(alljvmargs)
 
-        compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
+        serverProcess.add("$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}")
 
         String javaCPs = this.getCPPaths(javaEnableDCE)
-        compileProcess += [CLASSPATH_SWITCH, javaCPs]
+        serverProcess.add(CLASSPATH_SWITCH)
+        serverProcess.add(javaCPs)
 
-        compileProcess += [tc]
+        serverProcess.add(tc)
 
-        if (this.getPort()) compileProcess += ["--port=${this.getPort()}"]
-        if (this.getContext()) compileProcess += ["--context=${this.getContext()}"]
+        // 为了避免命令行过长 下列参数均使用文件方式设置
+        List<String> spArgs = []
 
-        if (this.getWorkingdir()) compileProcess += ["--workingdir=${this.getWorkingdir()}"]
-        if (this.getConfigfile()) compileProcess += ["--configfile=${this.getConfigfile()}"]
-        if (this.getLoglevel()) compileProcess += ["--loglevel=${this.getLoglevel()}"]
+
+        if (this.getPort()) spArgs.add("--port=${this.getPort()}")
+        if (this.getContext()) spArgs.add("--context=${this.getContext()}")
+
+        if (this.getWorkingdir()) spArgs.add("--workingdir=${this.getWorkingdir()}")
+        if (this.getConfigfile()) spArgs.add("--configfile=${this.getConfigfile()}")
+        if (this.getLoglevel()) spArgs.add("--loglevel=${this.getLoglevel()}")
 
         String pWebapp = this.getProcessWebapp()
         if (!pWebapp) pWebapp = this.getWebapp().canonicalPath
 
-        compileProcess += ["--webapp=${pWebapp}"]
+        spArgs.add("--webapp=${pWebapp}")
 
         File pLockfile = CBGServers.runningServerLockFile(project)
         if (pLockfile == null) pLockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.lock")
 
-        compileProcess += ["--lockfile=${pLockfile.canonicalPath}"]
-
+        spArgs.add("--lockfile=${pLockfile.canonicalPath}")
 
         File pReloadLockfile = CBGServers.forceDeleteServerReloadLockFile(project)
         if (pReloadLockfile == null) pReloadLockfile = new File(new File(project.getBuildDir(), "tmp"), ".cbserver.reload.lock")
 
-        compileProcess += ["--reloadLockfile=${pReloadLockfile.canonicalPath}"]
+        spArgs.add("--reloadLockfile=${pReloadLockfile.canonicalPath}")
 
-
-        this.getProcessClassesdirs().each { String s ->
-            compileProcess += ["--classesdir=${s}"]
+        Set<String> procClassdirs = this.getProcessClassesdirs()
+        if (procClassdirs) procClassdirs.each { String s ->
+            spArgs.add("--classesdir=${s}")
         }
 
-        this.getProcessResourcedirs().each { String s ->
-            compileProcess += ["--resourcesdir=${s}"]
+        Set<String> procResourcedirs = this.getProcessResourcedirs()
+        if (procResourcedirs) procResourcedirs.each { String s ->
+            spArgs.add("--resourcesdir=${s}")
         }
 
-        this.getProcessServerClasspaths().each { String s ->
-            compileProcess += ["--serverClasspath=${s}"]
+        Set<String> procServerClasspaths = this.getProcessServerClasspaths(pWebapp)
+        if (procServerClasspaths) procServerClasspaths.each { String s ->
+            spArgs.add("--serverClasspath=${s}")
         }
 
         this.getProcessOptions().each { String o ->
-            compileProcess += ["--option=${o}"]
+            spArgs.add("--option=${o}")
         }
 
+        try {
+
+            File argfile = project.file(Paths.get(this.temporaryDir.canonicalPath, "emserver", "emserver_argsfile.conf"))
+            FileUtils.forceMkdirParent(argfile)
+            if (argfile.exists()) FileUtils.forceDelete(argfile)
+
+            FileUtils.touch(argfile)
+
+            FileUtils.writeLines(argfile, "UTF-8", spArgs)
+
+            serverProcess.add("--argsfile=${argfile.canonicalPath}")
+        } catch (Throwable e) {
+            // fallback 使用原有增加参数的方式
+            project.logger.warn "无法执行创建命令行文件的操作 参数直接送入命令行"
+            serverProcess.addAll(spArgs)
+        }
 
         List<String> sysenvs = []
 
-        if (this.getProcessEnvs()) sysenvs += this.getProcessEnvs()
+        if (this.getProcessEnvs()) sysenvs.addAll(this.getProcessEnvs())
         List<String> dsenvs = CBGs.getSystemEnvs()
-        if (dsenvs) sysenvs += dsenvs
+        if (dsenvs) sysenvs.addAll(dsenvs)
 
-        project.logger.info "Server 执行命令 ${compileProcess}"
+        project.logger.info "Server 执行命令 ${serverProcess}"
         project.logger.debug "Server 环境变量 ${sysenvs}"
 
-        return compileProcess.execute(sysenvs, this.project.buildDir)
+        return serverProcess.execute(sysenvs, this.project.buildDir)
     }
 
     /**
@@ -281,7 +319,7 @@ abstract class CBGServerBaseTask extends DefaultTask {
      * 对于 webapp 任务 （webapp目标中不存在lib，需要手工将依赖的类路径以及lib包含到此项中）
      * @return
      */
-    protected abstract Set<String> getProcessServerClasspaths()
+    protected abstract Set<String> getProcessServerClasspaths(String pWebappDir)
 
     protected Set<String> getProcessJvmArgs(String javaBinary, JavaVersion javaVersion) {
         if (!this.getJvmArgs()) return []

@@ -15,6 +15,8 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.plugins.WarPlugin
 import org.gradle.api.tasks.bundling.War
 
+import java.nio.file.Paths
+
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -28,8 +30,8 @@ class CBGVaadinPlugin implements Plugin<Project> {
     static final String CONFIGURATION_THEME = "cbvaadin-theme-compiler"
     static final String CONFIGURATION_SERVER = "cbvaadin-server"
     static final String CONFIGURATION_CLIENT = 'cbvaadin-client'
-    static final String CONFIGURATION_CLIENT_COMPILE = 'cbvaadin-client-compile' // TODO 此处对应 vaadinCompile 需确定是否需要此名称与Task一致
-
+    static final String CONFIGURATION_CLIENT_COMPILE = 'cbvaadin-client-compile'
+    // TODO 此处对应 vaadinCompile 需确定是否需要此名称与Task一致
 
 
     @Override
@@ -37,15 +39,28 @@ class CBGVaadinPlugin implements Plugin<Project> {
         project.buildDir.mkdirs()
 
         if (!project.plugins.findPlugin(WarPlugin)) project.plugins.apply(WarPlugin)
-        War war = project.tasks.findByName(WarPlugin.WAR_TASK_NAME)
-        if (war) war.dependsOn CBGVaadinCompileThemeTask.NAME
 
         CBGVaadinExtension vde = project.extensions.create(EXTENSION_NAME, CBGVaadinExtension)
+
+        configVaadinWarTasks(project, vde)
 
         configVaadinRepositories(project, vde)
         configVaadinDependencies(project, vde)
 
         configVaadinTasks(project, vde)
+    }
+
+    private static configVaadinWarTasks(Project project, CBGVaadinExtension vde) {
+        project.afterEvaluate { Project p ->
+            if (vde.enable) {
+                War war = project.tasks.findByName(WarPlugin.WAR_TASK_NAME)
+                CBGVaadinCompileThemeTask themeTask = project.tasks.findByName(CBGVaadinCompileThemeTask.NAME)
+                if (war && themeTask) {
+                    war.dependsOn themeTask
+                    // TODO 增加打包的逻辑
+                }
+            }
+        }
     }
 
     /**

@@ -1,10 +1,13 @@
 package corebox.plugin.gradle.server.task
 
+import org.apache.commons.io.filefilter.WildcardFileFilter
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
+
+import java.nio.file.Paths
 
 /**
  *
@@ -56,12 +59,52 @@ class CBGServerRunTask extends CBGServerBaseTask {
     }
 
     @Override
-    protected Set<String> getProcessServerClasspaths() {
+    protected Set<String> getProcessServerClasspaths(String pWebappDir) {
         if (!this.getWebAppClasspath()) return []
 
         Set<String> os = new LinkedHashSet<>()
+
+        if (this.getServerClasspaths()) os.addAll(this.getServerClasspaths())
+
+        // 额外处理 获取的 classpath 应该做去重处理
+
+        Map<String, File> files = new LinkedHashMap<>()
+
         this.getWebAppClasspath().each { File f ->
-            if (f) os.add(f.canonicalPath)
+            if (f) files.put(f.name, f)
+        }
+
+        // blacklist: 当存在 WEB-INF/lib 时，server classpaths 不应包含对应 jar
+        Set<WildcardFileFilter> blacklist = []
+        if (this.getBlacklistJars()) this.getBlacklistJars().each { String fp ->
+            blacklist.add(new WildcardFileFilter(fp))
+        }
+
+        Set<String> blkjars = []
+        files.each { String k, File f ->
+            for (WildcardFileFilter wf : blacklist) {
+                if (wf.accept(f)) blkjars.add(k)
+            }
+        }
+
+        if (blkjars) blkjars.each { String k ->
+            files.remove(k)
+            project.logger.info "classpath 去掉了与 blacklistJars 匹配的项 ${k}  "
+        }
+
+        File webinfLib = project.file(Paths.get(pWebappDir, "WEB-INF", "lib"))
+        if (webinfLib && webinfLib.exists() && webinfLib.isDirectory()) {
+            File[] libfiles = webinfLib.listFiles()
+            if (libfiles) libfiles.each { File f ->
+                if (files.containsKey(f.getName())) {
+                    files.remove(f.getName())
+                    project.logger.info "classpath 去掉了与 WEB-INF/lib/ 已存在的项 ${f.getName()}"
+                }
+            }
+        }
+
+        files.each { String k, File v ->
+            if (v) os.add(v.canonicalPath)
         }
 
         return os

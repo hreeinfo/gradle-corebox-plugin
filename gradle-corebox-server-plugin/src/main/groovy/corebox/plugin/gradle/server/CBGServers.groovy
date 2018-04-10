@@ -85,9 +85,9 @@ final class CBGServers {
     static FileCollection appRunWebAppClasspath(Project project, CBGServerExtension spe) {
         if (project == null || spe == null) return null
 
-        if (spe.explode) {
-            FileCollection runtimeClasspath = project.files()
-            return runtimeClasspath
+        if (spe.getExplode()) {
+            FileCollection weconfig = project.configurations.getByName(CBGServerPlugin.WEBAPP_EXTENSION_NAME)
+            return (weconfig) ? weconfig : project.files()
         } else {
             return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
         }

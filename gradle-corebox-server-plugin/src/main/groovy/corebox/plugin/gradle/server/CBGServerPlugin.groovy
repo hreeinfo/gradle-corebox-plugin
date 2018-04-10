@@ -17,6 +17,7 @@ import org.gradle.api.tasks.SourceSetOutput
  */
 class CBGServerPlugin implements Plugin<Project> {
     static final String SERVER_EXTENSION_NAME = "cbserver"
+    static final String WEBAPP_EXTENSION_NAME = "cbwebapp"
     static final String TASK_GROUP = "corebox"
 
     static final String TASK_EXPLODE_WAR_NAME = "explodedWar"
@@ -70,7 +71,10 @@ class CBGServerPlugin implements Plugin<Project> {
         if (project.plugins.findPlugin(WarPlugin) == null) project.plugins.apply(WarPlugin)
 
         project.configurations.create(SERVER_EXTENSION_NAME).setVisible(false).setTransitive(true)
-                .setDescription("用于 cbserver 运行的库依赖")
+                .setDescription("用于 cbserver 运行的库依赖 仅在server运行时可见")
+
+        project.configurations.create(WEBAPP_EXTENSION_NAME).setVisible(false).setTransitive(true)
+                .setDescription("用于 cbwebapp 库依赖 此配置将作为附加的webapp classpath送给server context")
 
         CBGServerExtension spe = project.extensions.create(SERVER_EXTENSION_NAME, CBGServerExtension.class)
 
@@ -95,16 +99,21 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("typeClass") { findEmbedServerTypeClass(spe.type) }
             conventionMapping.map("port") { spe.port }
             conventionMapping.map("daemon") { spe.daemon }
+            conventionMapping.map("explode") { spe.explode }
             conventionMapping.map("context") { spe.context }
             conventionMapping.map("workingdir") { spe.workingdir }
             conventionMapping.map("configfile") { spe.configfile }
             conventionMapping.map("loglevel") { spe.loglevel }
 
+
+
             conventionMapping.map("logToConsole") { spe.logToConsole }
             conventionMapping.map("jvmArgs") { spe.jvmArgs }
+            conventionMapping.map("blacklistJars") { spe.blacklistJars }
 
             conventionMapping.map("classesdirs") { spe.classesdirs }
             conventionMapping.map("resourcesdirs") { spe.resourcesdirs }
+            conventionMapping.map("serverClasspaths") { spe.serverClasspaths }
             conventionMapping.map("options") { findEmbedServerTypeOptions(spe) }
             conventionMapping.map("runtimeConfigs") { spe.runtimeConfigs }
 
