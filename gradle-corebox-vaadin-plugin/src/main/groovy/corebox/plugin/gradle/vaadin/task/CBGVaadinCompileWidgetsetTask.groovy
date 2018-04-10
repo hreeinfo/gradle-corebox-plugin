@@ -18,7 +18,7 @@ import org.gradle.api.tasks.TaskAction
  */
 @CacheableTask
 class CBGVaadinCompileWidgetsetTask extends DefaultTask {
-    static final String NAME = "appVaadinWidgetset"
+    static final String TASK_NAME_VAADIN_WIIDGET = "appVaadinWidgetset"
 
     @Input
     @Optional

@@ -139,7 +139,7 @@ class CBGVaadins {
     @Memoized
     static File getThemesDirectory(Project project) {
         File themesDir
-        CBGVaadinCompileThemeTask compileThemeTask = project.tasks.getByName(CBGVaadinCompileThemeTask.NAME)
+        CBGVaadinCompileThemeTask compileThemeTask = project.tasks.getByName(CBGVaadinCompileThemeTask.TASK_NAME_VAADIN_THEME)
         if (compileThemeTask.themesDirectory) {
             String customDir = compileThemeTask.themesDirectory
             themesDir = new File(customDir)
@@ -201,7 +201,7 @@ class CBGVaadins {
         FileCollection classpath
         if (useClasspathJar) {
             // Add dependencies using the classpath jar
-            CBGVaadinBuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadinBuildClassPathJar.NAME)
+            CBGVaadinBuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ)
             if (!pathJarTask.archivePath.exists()) throw new IllegalStateException("Classpath jar has not been created in project $pathJarTask.project")
             classpath = project.files(pathJarTask.archivePath)
         } else {

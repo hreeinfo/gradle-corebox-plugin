@@ -11,7 +11,7 @@ import org.gradle.api.tasks.TaskAction
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerReloadTask extends DefaultTask {
-    static final String NAME = "appReload"
+    static final String TASK_NAME_APPRELOAD = "appReload"
 
     CBGServerReloadTask() {
         outputs.upToDateWhen { false }

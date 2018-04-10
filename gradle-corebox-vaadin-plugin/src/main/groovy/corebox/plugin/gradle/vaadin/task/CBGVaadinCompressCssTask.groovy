@@ -16,7 +16,7 @@ import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
 class CBGVaadinCompressCssTask extends DefaultTask {
-    static final String NAME = "appVaadinCompressCss"
+    static final String TASK_NAME_VAADIN_CSS = "appVaadinCompressCss"
 
     @Input
     Boolean  enableTask = Boolean.TRUE

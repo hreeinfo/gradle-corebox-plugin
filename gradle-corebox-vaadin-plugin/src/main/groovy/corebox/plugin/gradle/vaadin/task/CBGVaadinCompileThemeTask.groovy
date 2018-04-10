@@ -27,7 +27,7 @@ import java.util.jar.JarInputStream
  */
 @CacheableTask
 class CBGVaadinCompileThemeTask extends DefaultTask {
-    static final String NAME = "appVaadinTheme"
+    static final String TASK_NAME_VAADIN_THEME = "appVaadinTheme"
 
     /**
      * 主 CSS 文件
@@ -82,11 +82,11 @@ class CBGVaadinCompileThemeTask extends DefaultTask {
             })
 
             if (getUseClasspathJar()) {
-                CBGVaadinBuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadinBuildClassPathJar.NAME)
+                CBGVaadinBuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ)
                 inputs.file(pathJarTask.archivePath)
             }
 
-            finalizedBy project.tasks[CBGVaadinCompressCssTask.NAME]
+            finalizedBy project.tasks[CBGVaadinCompressCssTask.TASK_NAME_VAADIN_CSS]
         }
     }
 

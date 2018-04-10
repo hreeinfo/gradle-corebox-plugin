@@ -127,7 +127,7 @@ class CBGServerPlugin implements Plugin<Project> {
         }
 
 
-        project.tasks.create(name: CBGServerRunTask.NAME, group: TASK_GROUP, type: CBGServerRunTask) {
+        project.tasks.create(name: CBGServerRunTask.TASK_NAME_APPRUN, group: TASK_GROUP, type: CBGServerRunTask) {
             description = "运行appserver"
             dependsOn TASK_EXPLODE_WAR_NAME
 
@@ -137,7 +137,7 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
         }
 
-        project.tasks.create(name: CBGServerRunDebugTask.NAME, group: TASK_GROUP, type: CBGServerRunDebugTask) {
+        project.tasks.create(name: CBGServerRunDebugTask.TASK_NAME_APPRUN_DEBUG, group: TASK_GROUP, type: CBGServerRunDebugTask) {
             description = "运行appserver (DEBUG模式)"
             dependsOn TASK_EXPLODE_WAR_NAME
 
@@ -151,13 +151,15 @@ class CBGServerPlugin implements Plugin<Project> {
         }
 
 
-        project.tasks.create(name: CBGServerStopTask.NAME, group: TASK_GROUP, type: CBGServerStopTask) {
+        project.tasks.create(name: CBGServerStopTask.TASK_NAME_APPSTOP, group: TASK_GROUP, type: CBGServerStopTask) {
             description = "停止appserver"
         }
 
 
-        project.tasks.create(name: CBGServerReloadTask.NAME, group: TASK_GROUP, type: CBGServerReloadTask) {
+        project.tasks.create(name: CBGServerReloadTask.TASK_NAME_APPRELOAD, group: TASK_GROUP, type: CBGServerReloadTask) {
             description = "重载appserver 对应的 webapp context"
+
+            // TODO reload
         }
     }
 

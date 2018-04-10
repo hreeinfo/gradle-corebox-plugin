@@ -15,8 +15,6 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.plugins.WarPlugin
 import org.gradle.api.tasks.bundling.War
 
-import java.nio.file.Paths
-
 /**
  *
  * <p>创建作者：xingxiuyi </p>
@@ -54,7 +52,7 @@ class CBGVaadinPlugin implements Plugin<Project> {
         project.afterEvaluate { Project p ->
             if (vde.enable) {
                 War war = project.tasks.findByName(WarPlugin.WAR_TASK_NAME)
-                CBGVaadinCompileThemeTask themeTask = project.tasks.findByName(CBGVaadinCompileThemeTask.NAME)
+                CBGVaadinCompileThemeTask themeTask = project.tasks.findByName(CBGVaadinCompileThemeTask.TASK_NAME_VAADIN_THEME)
                 if (war && themeTask) {
                     war.dependsOn themeTask
                     // TODO 增加打包的逻辑
@@ -153,7 +151,7 @@ class CBGVaadinPlugin implements Plugin<Project> {
     }
 
     private static configVaadinTasks(Project project, CBGVaadinExtension vde) {
-        project.tasks.create(name: CBGVaadinBuildClassPathJar.NAME, group: TASK_GROUP, type: CBGVaadinBuildClassPathJar) {
+        project.tasks.create(name: CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ, group: TASK_GROUP, type: CBGVaadinBuildClassPathJar) {
             description = "执行 Vaadin 工具任务 Build ClassPath Jar"
 
             classifier = 'classpath'
@@ -167,9 +165,9 @@ class CBGVaadinPlugin implements Plugin<Project> {
             conventionMapping.map("useClasspathJar") { vde.useClasspathJar }
         }
 
-        project.tasks.create(name: CBGVaadinCompressCssTask.NAME, group: TASK_GROUP, type: CBGVaadinCompressCssTask) {
+        project.tasks.create(name: CBGVaadinCompressCssTask.TASK_NAME_VAADIN_CSS, group: TASK_GROUP, type: CBGVaadinCompressCssTask) {
             description = "执行 Vaadin Theme CSS 压缩"
-            dependsOn CBGVaadinCompileThemeTask.NAME
+            dependsOn CBGVaadinCompileThemeTask.TASK_NAME_VAADIN_THEME
 
             onlyIf = {
                 vde.enable && vde.themeCompress
@@ -177,9 +175,9 @@ class CBGVaadinPlugin implements Plugin<Project> {
             conventionMapping.map("enableTask") { vde.enable }
         }
 
-        project.tasks.create(name: CBGVaadinUpdateAddonStylesTask.NAME, group: TASK_GROUP, type: CBGVaadinUpdateAddonStylesTask) {
+        project.tasks.create(name: CBGVaadinUpdateAddonStylesTask.TASK_NAME_VAADIN_ADDON_STYLE, group: TASK_GROUP, type: CBGVaadinUpdateAddonStylesTask) {
             description = "执行 Vaadin Addon Theme Style 更新"
-            dependsOn 'classes', CBGVaadinBuildClassPathJar.NAME
+            dependsOn 'classes', CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ
             onlyIf = {
                 vde.enable
             }
@@ -188,9 +186,9 @@ class CBGVaadinPlugin implements Plugin<Project> {
             conventionMapping.map("logToConsole") { vde.logToConsole }
         }
 
-        project.tasks.create(name: CBGVaadinCompileThemeTask.NAME, group: TASK_GROUP, type: CBGVaadinCompileThemeTask) {
+        project.tasks.create(name: CBGVaadinCompileThemeTask.TASK_NAME_VAADIN_THEME, group: TASK_GROUP, type: CBGVaadinCompileThemeTask) {
             description = "执行 Vaadin Theme 编译过程，将 scss 编译为 css"
-            dependsOn('classes', CBGVaadinBuildClassPathJar.NAME, CBGVaadinUpdateAddonStylesTask.NAME)
+            dependsOn('classes', CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ, CBGVaadinUpdateAddonStylesTask.TASK_NAME_VAADIN_ADDON_STYLE)
 
             onlyIf {
                 vde.enable

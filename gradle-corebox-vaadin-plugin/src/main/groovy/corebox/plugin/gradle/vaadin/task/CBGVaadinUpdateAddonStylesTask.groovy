@@ -18,7 +18,7 @@ import org.gradle.api.tasks.TaskAction
  */
 @CacheableTask
 class CBGVaadinUpdateAddonStylesTask extends DefaultTask {
-    static final String NAME = "appVaadinUpdateAddonStyles"
+    static final String TASK_NAME_VAADIN_ADDON_STYLE = "appVaadinUpdateAddonStyles"
     static final String ADDONS_SCSS_FILE = "addons.scss"
 
     @Input
@@ -47,7 +47,7 @@ class CBGVaadinUpdateAddonStylesTask extends DefaultTask {
             }
 
             if (this.getUseClasspathJar()) {
-                CBGVaadinBuildClassPathJar pathJarTask = project.getTasksByName(CBGVaadinBuildClassPathJar.NAME, true).first()
+                CBGVaadinBuildClassPathJar pathJarTask = project.getTasksByName(CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ, true).first()
                 inputs.file(pathJarTask.archivePath)
             }
         }
