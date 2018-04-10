@@ -14,7 +14,7 @@ class CBGServerRunWarTask extends CBGServerBaseTask {
     }
 
     @Override
-    protected Set<String> getProcessServerClasspaths() {
+    protected Set<String> getProcessServerClasspaths(String pWebappDir) {
         return null
     }
 }
