@@ -12,7 +12,7 @@ import org.gradle.api.tasks.Optional
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerRunDebugTask extends CBGServerRunTask {
-    static final String NAME = "appRunDebug"
+    static final String TASK_NAME_APPRUN_DEBUG = "appRunDebug"
 
     static final String DAD_FLAG = "-Xdebug"
 
@@ -105,10 +105,11 @@ class CBGServerRunDebugTask extends CBGServerRunTask {
 
         if (!jv) jv = JavaVersion.current()
 
-        if (jv.isJava9Compatible() || jv.isJava10Compatible()) {
-            return "address=*:${this.getDebugPort()}"
-        } else {
-            return "address=${this.getDebugPort()}"
+        try {
+            if (jv.isJava9Compatible() || jv.isJava10Compatible()) return "address=*:${this.getDebugPort()}"
+        } catch (Throwable ignored) {
         }
+
+        return "address=${this.getDebugPort()}"
     }
 }

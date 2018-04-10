@@ -16,7 +16,7 @@ import org.gradle.jvm.tasks.Jar
  */
 @CacheableTask
 class CBGVaadinBuildClassPathJar extends Jar {
-    static final String NAME = "appVaadinBuildClassPathJar"
+    static final String TASK_NAME_VAADIN_BCPJ = "appVaadinBuildClassPathJar"
 
     @Input
     Boolean enableTask = Boolean.TRUE

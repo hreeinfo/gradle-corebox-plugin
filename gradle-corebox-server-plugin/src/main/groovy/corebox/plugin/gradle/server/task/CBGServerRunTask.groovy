@@ -16,7 +16,7 @@ import java.nio.file.Paths
  * <p>版权所属：xingxiuyi </p>
  */
 class CBGServerRunTask extends CBGServerBaseTask {
-    static final String NAME = "appRun"
+    static final String TASK_NAME_APPRUN = "appRun"
 
 
     @InputDirectory
@@ -92,7 +92,7 @@ class CBGServerRunTask extends CBGServerBaseTask {
             project.logger.info "classpath 去掉了与 blacklistJars 匹配的项 ${k}  "
         }
 
-        File webinfLib = project.file(Paths.get(pWebappDir, "WEB-INF", "lib"))
+        File webinfLib = project.file(Paths.get(pWebappDir, "WEB-INF", "lib").toFile())
         if (webinfLib && webinfLib.exists() && webinfLib.isDirectory()) {
             File[] libfiles = webinfLib.listFiles()
             if (libfiles) libfiles.each { File f ->
