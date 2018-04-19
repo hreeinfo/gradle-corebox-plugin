@@ -128,11 +128,7 @@ class CBGServerRunTask extends CBGServerBaseTask {
         // 额外处理 获取的 classpath 应该做去重处理
         FileCollection wacps = this.getWebAppClasspath()
 
-        wacps.each { println "TASK 加入类路径 ${it}" }
-
         Set<String> wos = this.filterExistsWebInfJars(pWebappDir, wacps)
-
-        wos.each { println "TASK 过滤类路径 ${it}" }
 
         if (wos) os.addAll(wos)
 
