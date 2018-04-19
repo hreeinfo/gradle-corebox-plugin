@@ -84,6 +84,10 @@ abstract class CBGServerBaseTask extends DefaultTask {
 
     @Input
     @Optional
+    List<String> jars = []
+
+    @Input
+    @Optional
     List<String> serverClasspaths = []
 
     @Input
@@ -237,6 +241,12 @@ abstract class CBGServerBaseTask extends DefaultTask {
             spArgs.add("--resourcesdir=${s}")
         }
 
+        Set<String> procJars = this.getProcessJars(pWebapp)
+        if (procJars) procJars.each { String s ->
+            spArgs.add("--jar=${s}")
+        }
+
+
         Set<String> procServerClasspaths = this.getProcessServerClasspaths(pWebapp)
         if (procServerClasspaths) procServerClasspaths.each { String s ->
             spArgs.add("--serverClasspath=${s}")
@@ -355,6 +365,17 @@ abstract class CBGServerBaseTask extends DefaultTask {
         return os
     }
 
+    protected Set<String> getProcessJars(String pWebappDir) {
+        if (!this.getJars()) return []
+
+        Set<String> os = new LinkedHashSet<>()
+
+        this.getJars().each { String s ->
+            if (s) os.add(s)
+        }
+
+        return os
+    }
 
     protected Set<String> getProcessOptions() {
         if (!this.getOptions()) return []
