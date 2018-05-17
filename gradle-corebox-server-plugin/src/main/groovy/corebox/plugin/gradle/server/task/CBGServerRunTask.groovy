@@ -1,8 +1,10 @@
 package corebox.plugin.gradle.server.task
 
+import corebox.plugin.gradle.server.CBGServerPlugin
 import org.apache.commons.io.filefilter.WildcardFileFilter
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.file.FileCollection
+import org.gradle.api.plugins.WarPlugin
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
@@ -21,9 +23,6 @@ class CBGServerRunTask extends CBGServerBaseTask {
 
     @InputDirectory
     File webapp
-
-    @InputFiles
-    FileCollection webAppClasspath
 
     @InputFiles
     @Optional
@@ -58,19 +57,30 @@ class CBGServerRunTask extends CBGServerBaseTask {
         return this.getWebapp().canonicalPath
     }
 
-    @Override
-    protected Set<String> getProcessServerClasspaths(String pWebappDir) {
-        if (!this.getWebAppClasspath()) return []
+    protected FileCollection getWebAppClasspath() { // 返回类路径 （不包含jar包）
+        if (this.getExplode()) {
+            return project.files()
+        } else {
+            // TODO 此处类路径应该包含 CBWEB 资源
+            return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
+        }
+    }
 
+
+    protected FileCollection getWebAppWebInfJars() {
+        if (this.getExplode()) {
+            FileCollection weconfig = project.configurations.getByName(CBGServerPlugin.WEBAPP_EXTENSION_NAME)
+            if (!weconfig) return project.files()
+            return weconfig.filter { it.name.endsWith(".jar") }
+        } else return project.files()
+    }
+
+    protected Set<String> filterExistsWebInfJars(String pWebappDir, FileCollection wacps) {
         Set<String> os = new LinkedHashSet<>()
-
-        if (this.getServerClasspaths()) os.addAll(this.getServerClasspaths())
-
-        // 额外处理 获取的 classpath 应该做去重处理
 
         Map<String, File> files = new LinkedHashMap<>()
 
-        this.getWebAppClasspath().each { File f ->
+        if (wacps) wacps.each { File f ->
             if (f) files.put(f.name, f)
         }
 
@@ -111,10 +121,49 @@ class CBGServerRunTask extends CBGServerBaseTask {
     }
 
     @Override
+    protected Set<String> getProcessServerClasspaths(String pWebappDir) {
+        Set<String> os = new LinkedHashSet<>()
+        if (this.getServerClasspaths()) os.addAll(this.getServerClasspaths())
+
+        // 额外处理 获取的 classpath 应该做去重处理
+        FileCollection wacps = this.getWebAppClasspath()
+
+        Set<String> wos = this.filterExistsWebInfJars(pWebappDir, wacps)
+
+        if (wos) os.addAll(wos)
+
+        return os
+    }
+
+
+    @Override
+    protected Set<String> getProcessJars(String pWebappDir) {
+        Set<String> os = super.getProcessJars()
+        if (!os) os = new LinkedHashSet<>()
+
+        // TODO 只应在 非 explodeWebApps 模式下生效
+
+        /*
+        FileCollection wajars = this.getWebAppWebInfJars()
+
+        wajars.each { println "TASK 加入库文件 ${it}" }
+
+        Set<String> wos = this.filterExistsWebInfJars(pWebappDir, wajars)
+
+        wos.each { println "TASK 过滤库文件 ${it}" }
+
+        if (wos) os.addAll(wos)
+         */
+
+        return os
+    }
+
+    @Override
     protected Set<String> getProcessClassesdirs() {
         Set<String> os = super.getProcessClassesdirs()
+        if (!os) os = new LinkedHashSet<>()
+
         if (this.getClassesDirectories()) {
-            if (!os) os = new LinkedHashSet<>()
             this.getClassesDirectories().each { File f ->
                 os.add(f.canonicalPath)
             }
@@ -125,9 +174,9 @@ class CBGServerRunTask extends CBGServerBaseTask {
     @Override
     protected Set<String> getProcessOptions() {
         Set<String> os = super.getProcessOptions()
+        if (!os) os = new LinkedHashSet<>()
 
         if (this.getClassesDirectories()) {
-            if (!os) os = new LinkedHashSet<>()
 
             String cds = ""
 

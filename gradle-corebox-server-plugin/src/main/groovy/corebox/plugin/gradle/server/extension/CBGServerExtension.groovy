@@ -24,6 +24,7 @@ class CBGServerExtension {
 
     List<String> classesdirs = []
     List<String> resourcesdirs = []
+    List<String> jars = []
     List<String> serverClasspaths = []
 
     Map<String, String> options = [:]
@@ -209,7 +210,33 @@ class CBGServerExtension {
     void resourcedir(File... resourcedir) {
         if (this.resourcesdirs == null) this.resourcesdirs = []
         if (resourcedir != null) resourcedir.each { File f ->
-            this.resourcesdirs.add(f.getAbsolutePath())
+            this.resourcesdirs.add(f.getCanonicalPath())
+        }
+    }
+
+    /**
+     * 附加的jar包 （当前Webapp以外的资源路径）
+     *
+     * 用于直接映射到 /WEB-INF/lib 下的jar文件
+     *
+     * @param resourcedir
+     */
+    void jar(String... jar) {
+        if (this.jars == null) this.jars = []
+        if (jar) this.jars.addAll(Arrays.asList(jar))
+    }
+
+    /**
+     * 附加的jar包 （当前Webapp以外的资源路径）
+     *
+     * 用于直接映射到 /WEB-INF/lib 下的jar文件
+     *
+     * @param resourcedir
+     */
+    void jar(File... jar) {
+        if (this.jars == null) this.jars = []
+        if (jar != null) jar.each { File f ->
+            this.jars.add(f.getCanonicalPath())
         }
     }
 

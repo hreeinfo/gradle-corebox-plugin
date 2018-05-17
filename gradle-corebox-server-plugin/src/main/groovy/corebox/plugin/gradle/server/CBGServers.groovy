@@ -57,9 +57,20 @@ final class CBGServers {
         def explodedWebapp = (spe.getExplodePath()) ? spe.getExplodePath() : "${project.buildDir}/${CBGServerPlugin.TASK_EXPLODE_WAR_DIR}"
         def warArchivePath = project.tasks.getByName(WarPlugin.WAR_TASK_NAME).archivePath
 
+        FileCollection weconfig = project.configurations.getByName(CBGServerPlugin.WEBAPP_EXTENSION_NAME)
+
         project.copy {
             from project.zipTree(warArchivePath)
             into explodedWebapp
+        }
+
+        if (!project.file("${explodedWebapp}/WEB-INF/lib")) project.mkdir("${explodedWebapp}/WEB-INF/lib")
+
+        if (weconfig) weconfig.each { File f ->
+            project.copy {
+                from f
+                into "${explodedWebapp}/WEB-INF/lib"
+            }
         }
     }
 
@@ -79,17 +90,6 @@ final class CBGServers {
             return project.file((spe.getExplodePath()) ? spe.getExplodePath() : "${project.buildDir}/${CBGServerPlugin.TASK_EXPLODE_WAR_DIR}")
         } else { // 直接运行模式 对应 src/main/webapp
             return projectWarConvention(project).getWebAppDir();
-        }
-    }
-
-    static FileCollection appRunWebAppClasspath(Project project, CBGServerExtension spe) {
-        if (project == null || spe == null) return null
-
-        if (spe.getExplode()) {
-            FileCollection weconfig = project.configurations.getByName(CBGServerPlugin.WEBAPP_EXTENSION_NAME)
-            return (weconfig) ? weconfig : project.files()
-        } else {
-            return project.tasks.getByName(WarPlugin.WAR_TASK_NAME).classpath
         }
     }
 

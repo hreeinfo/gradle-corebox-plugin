@@ -32,7 +32,7 @@ class CBGServerPlugin implements Plugin<Project> {
     static final String EMBED_SERVER_MODULE_PAYARA = "commons-embed-server-payara"
     static final String EMBED_SERVER_MODULE_PAYARA_CLASS = "com.hreeinfo.commons.embed.server.support.EmbedPayaraServer"
 
-    static final String DEFAULT_VERSION_EMBED_SERVER = "0.2"
+    static final String DEFAULT_VERSION_EMBED_SERVER = "1.0"
 
     static final String EMBED_SERVER_DEFAULT_TYPE = "JETTY"
     static final String EMBED_SERVER_DEFAULT_TYPE_CLASS = EMBED_SERVER_MODULE_JETTY_CLASS
@@ -113,12 +113,12 @@ class CBGServerPlugin implements Plugin<Project> {
 
             conventionMapping.map("classesdirs") { spe.classesdirs }
             conventionMapping.map("resourcesdirs") { spe.resourcesdirs }
+            conventionMapping.map("jars") { spe.jars }
             conventionMapping.map("serverClasspaths") { spe.serverClasspaths }
             conventionMapping.map("options") { findEmbedServerTypeOptions(spe) }
             conventionMapping.map("runtimeConfigs") { spe.runtimeConfigs }
 
             // hotReload 配置
-            // TODO DCEVM 配置
             conventionMapping.map("hotReload") { spe.hot }
             conventionMapping.map("hotReloadType") { spe.hottype }
             conventionMapping.map("hotReloadDCEVM") { spe.runtimeConfigs.get(RUNTIME_CONFIG_DCEVM_JVM) }
@@ -133,7 +133,6 @@ class CBGServerPlugin implements Plugin<Project> {
 
 
             conventionMapping.map("webapp") { CBGServers.appRunWebappDir(project, spe) }
-            conventionMapping.map("webAppClasspath") { CBGServers.appRunWebAppClasspath(project, spe) }
             conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
         }
 
@@ -146,7 +145,6 @@ class CBGServerPlugin implements Plugin<Project> {
             conventionMapping.map("debugConfig") { spe.debugConfig }
 
             conventionMapping.map("webapp") { CBGServers.appRunWebappDir(project, spe) }
-            conventionMapping.map("webAppClasspath") { CBGServers.appRunWebAppClasspath(project, spe) }
             conventionMapping.map("classesDirectories") { getMainSourceSetOutputClassesDir(project) }
         }
 
