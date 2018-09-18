@@ -1,0 +1,58 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id "groovy"
+    id "maven"
+    id "idea"
+}
+
+dependencies {
+    compile(gradleApi())
+    compile(localGroovy())
+
+    compile(project(":gradle-corebox-common-plugin"))
+
+    compileOnly("io.bit3:jsass:${version_jsass}")
+}
+
+processResources {
+    inputs.property('version', project.version)
+    inputs.property('version_vaadin8', "${version_vaadin8}")
+    inputs.property('version_servlet', "${version_servlet}")
+    inputs.property('version_vaadin8_sass', "${version_vaadin8_sass}")
+    inputs.property('version_jsass', "${version_jsass}")
+
+    from(sourceSets.main.resources.srcDirs){
+        filesMatching("/gradle-corebox-vaadin8-plugin.properties"){
+            filter(ReplaceTokens, tokens: [
+                    'version': project.version.toString(),
+                    version_vaadin8: "${version_vaadin8}".toString(),
+                    version_servlet: "${version_servlet}".toString(),
+                    version_vaadin8_sass: "${version_vaadin8_sass}".toString(),
+                    version_jsass: "${version_jsass}".toString()
+            ])
+        }
+    }
+}
+
+
+jar {
+    manifest{
+        attributes(
+                "Vaadin-Package-Version": 1,
+                "Vaadin-License-Title": "Apache 2.0",
+                "Implementation-Title": "Corebox Vaadin Plugin for Gradle",
+                "Implementation-Version": version,
+                "Implementation-Vendor": "xingxiuyi",
+        )
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+
