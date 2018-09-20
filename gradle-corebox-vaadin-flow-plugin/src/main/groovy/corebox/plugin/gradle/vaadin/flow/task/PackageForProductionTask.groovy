@@ -161,7 +161,7 @@ class PackageForProductionTask extends DefaultTask {
         URL[] urls = []
 
         if (this.getClasspaths()) for (it in this.getClasspaths()) {
-            urls += it.toURI().toURL()
+            if (!it.name.endsWith(".war")) urls += it.toURI().toURL()
         }
 
         urls

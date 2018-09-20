@@ -15,6 +15,7 @@ import org.gradle.api.tasks.bundling.War
  */
 class CBGVaadinFlowPlugin implements Plugin<Project> {
     static final String SERVER_EXTENSION_NAME = "cbvaadin"
+    static final String WEBAPP_EXTENSION_NAME = 'cbweb'
     static final String TASK_GROUP = "corebox"
 
     static String FRONTEND_WORKING_DIRECTORY = "src/main/webapp/frontend"
@@ -129,6 +130,7 @@ class CBGVaadinFlowPlugin implements Plugin<Project> {
                     Set<ResolvedArtifact> cpartifacts = project.configurations.getByName("runtime").resolvedConfiguration.resolvedArtifacts
                     cpartifacts += project.configurations.getByName("providedCompile").resolvedConfiguration.resolvedArtifacts
                     cpartifacts += project.configurations.getByName("providedRuntime").resolvedConfiguration.resolvedArtifacts
+                    cpartifacts += project.configurations.getByName(WEBAPP_EXTENSION_NAME).resolvedConfiguration.resolvedArtifacts
 
                     for (fitem in cpartifacts) {
                         if (fitem.file != null && fitem.file.exists()) files += fitem.file

@@ -118,6 +118,7 @@ class CopyProductionFilesTask extends DefaultTask {
         cpartifacts += project.configurations.getByName("compileOnly").resolvedConfiguration.resolvedArtifacts
         cpartifacts += project.configurations.getByName("providedCompile").resolvedConfiguration.resolvedArtifacts
         cpartifacts += project.configurations.getByName("providedRuntime").resolvedConfiguration.resolvedArtifacts
+        cpartifacts += project.configurations.getByName(CBGVaadinFlowPlugin.WEBAPP_EXTENSION_NAME).resolvedConfiguration.resolvedArtifacts
 
         Set<ResolvedArtifact> ras = []
         cpartifacts.each {
@@ -144,6 +145,7 @@ class CopyProductionFilesTask extends DefaultTask {
         cpartifacts += project.configurations.getByName("compileOnly").resolvedConfiguration.resolvedArtifacts
         cpartifacts += project.configurations.getByName("providedCompile").resolvedConfiguration.resolvedArtifacts
         cpartifacts += project.configurations.getByName("providedRuntime").resolvedConfiguration.resolvedArtifacts
+        cpartifacts += project.configurations.getByName(CBGVaadinFlowPlugin.WEBAPP_EXTENSION_NAME).resolvedConfiguration.resolvedArtifacts
 
         Set<ResolvedArtifact> ras = []
         cpartifacts.each {
