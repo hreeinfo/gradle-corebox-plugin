@@ -1,7 +1,7 @@
 package corebox.plugin.gradle.vaadin8.task
 
 import corebox.plugin.gradle.common.CBGs
-import corebox.plugin.gradle.vaadin.CBGVaadins
+import corebox.plugin.gradle.vaadin8.CBGVaadin8s
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
@@ -43,7 +43,7 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
     static final String VAADIN_COMPILER = "vaadin"
 
     @Input
-    Boolean  enableTask = Boolean.TRUE
+    Boolean enableTask = Boolean.TRUE
 
     @Input
     @Optional
@@ -69,12 +69,12 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
     @Optional
     List<String> jvmArgs = []
 
-    CBGVaadinCompileThemeTask() {
+    CBGVaadin8CompileThemeTask() {
         super()
         project.afterEvaluate {
             if (!getEnableTask()) return
 
-            File themesDir = CBGVaadins.getThemesDirectory(project)
+            File themesDir = CBGVaadin8s.getThemesDirectory(project)
             inputs.dir themesDir
             inputs.files(project.fileTree(dir: themesDir, include: '**/*.scss').collect())
             outputs.files(project.fileTree(dir: themesDir, include: STYLES_SCSS_PATTERN).collect {
@@ -82,11 +82,11 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
             })
 
             if (getUseClasspathJar()) {
-                CBGVaadinBuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ)
+                CBGVaadin8BuildClassPathJar pathJarTask = project.tasks.getByName(CBGVaadin8BuildClassPathJar.TASK_NAME_VAADIN_BCPJ)
                 inputs.file(pathJarTask.archivePath)
             }
 
-            finalizedBy project.tasks[CBGVaadinCompressCssTask.TASK_NAME_VAADIN_CSS]
+            finalizedBy project.tasks[CBGVaadin8CompressCssTask.TASK_NAME_VAADIN_CSS]
         }
     }
 
@@ -106,7 +106,7 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
      * @return
      */
     void compile(Project project, boolean isRecompile = false) {
-        File themesDir = CBGVaadins.getThemesDirectory(project)
+        File themesDir = CBGVaadin8s.getThemesDirectory(project)
         logger.info "开始编译 Theme 所在目录为" + themesDir
 
         FileTree themes = project.fileTree(dir: themesDir, include: STYLES_SCSS_PATTERN)
@@ -188,7 +188,7 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
         }
 
         compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
-        compileProcess += [CLASSPATH_SWITCH, CBGVaadins.getCompileClassPathOrJar(project, this.getUseClasspathJar()).asPath]
+        compileProcess += [CLASSPATH_SWITCH, CBGVaadin8s.getCompileClassPathOrJar(project, this.getUseClasspathJar()).asPath]
         compileProcess += "com.vaadin.sass.SassCompiler"
         compileProcess += [themeDir.canonicalPath, targetCSSFile.canonicalPath]
 
@@ -207,7 +207,7 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
         }
 
         compileProcess += ["$TEMPDIR_SWITCH=${this.temporaryDir.canonicalPath}"]
-        compileProcess += [CLASSPATH_SWITCH, CBGVaadins.getCompileClassPathOrJar(project, this.getUseClasspathJar()).asPath]
+        compileProcess += [CLASSPATH_SWITCH, CBGVaadin8s.getCompileClassPathOrJar(project, this.getUseClasspathJar()).asPath]
         compileProcess += "corebox.plugin.gradle.vaadin.LibSassCompiler"
         compileProcess += [stylesScss.canonicalPath, stylesCss.canonicalPath, unpackedThemesDir.canonicalPath]
 
@@ -240,11 +240,11 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
                     def dependentProject = dependency.dependencyProject
                     if (dependentProject.hasProperty(VAADIN_COMPILER)) {
                         dependentProject.copy {
-                            from CBGVaadins.getThemesDirectory(project)
+                            from CBGVaadin8s.getThemesDirectory(project)
                             into unpackedThemesDir
                         }
                     }
-                } else if (CBGVaadins.isResolvable(project, conf)) {
+                } else if (CBGVaadin8s.isResolvable(project, conf)) {
                     conf.files(dependency).each { File file ->
                         file.withInputStream { InputStream stream ->
                             def jarStream = new JarInputStream(stream)
@@ -275,7 +275,7 @@ class CBGVaadin8CompileThemeTask extends DefaultTask {
         // 复制项目主题到解压目录中
         project.logger.info "Copying project theme into ${unpackedThemesDir}"
         project.copy {
-            from CBGVaadins.getThemesDirectory(project)
+            from CBGVaadin8s.getThemesDirectory(project)
             into unpackedThemesDir
         }
 

@@ -13,9 +13,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileVisitDetails
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.logging.LogLevel
-import org.gradle.api.plugins.JavaPluginConvention
-import org.gradle.api.plugins.WarPluginConvention
-import org.gradle.api.tasks.SourceSet
 import org.gradle.util.VersionNumber
 
 import java.util.jar.Attributes
@@ -88,23 +85,10 @@ class CBGVaadin8s {
         properties
     }
 
-    /**
-     * 项目的 webapp 目录
-     * @param project
-     * @return
-     */
     @Memoized
     static File getWebAppDirectory(Project project) {
-        String outputDir = project.cbvaadin.outputDir
-        if (outputDir) {
-            project.file(outputDir)
-        } else if (project.convention.findPlugin(WarPluginConvention)) {
-            project.convention.getPlugin(WarPluginConvention).webAppDir
-        } else {
-            project.file("src/main/webapp")
-        }
+        return CBGs.getWebAppDirectory(project)
     }
-
     /**
      * 项目的 widgetsets 目录
      * @param project
@@ -188,7 +172,7 @@ class CBGVaadin8s {
 
     @Memoized
     static FileCollection getCompileClassPath(Project project) {
-        project.sourceSets.main.compileClasspath
+        return CBGs.getCompileClassPath(project)
     }
 
     /**
@@ -363,28 +347,7 @@ class CBGVaadin8s {
 
     @Memoized
     static FileCollection getWarClasspath(Project project) {
-        // 包含 project classes 和 resources
-        JavaPluginConvention java = project.convention.getPlugin(JavaPluginConvention)
-        SourceSet mainSourceSet = java.sourceSets.getByName('main')
-        FileCollection classpath = mainSourceSet.output.classesDirs
-        classpath += project.files(mainSourceSet.output.resourcesDir)
-
-        // 包含 runtime 依赖
-        classpath += project.configurations.runtime
-
-        // 移除 provided 依赖
-        if (project.configurations.findByName('providedCompile')) {
-            classpath -= project.configurations.providedCompile
-        }
-
-        if (project.configurations.findByName('providedRuntime')) {
-            classpath -= project.configurations.providedRuntime
-        }
-
-        // 确保没有重复
-        classpath = project.files(classpath.files)
-
-        classpath
+        return CBGs.getWarClasspath(project)
     }
 
     @Memoized

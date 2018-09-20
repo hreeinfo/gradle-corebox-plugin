@@ -1,7 +1,7 @@
 package corebox.plugin.gradle.vaadin8.task
 
 import corebox.plugin.gradle.common.CBGs
-import corebox.plugin.gradle.vaadin.CBGVaadins
+import corebox.plugin.gradle.vaadin8.CBGVaadin8s
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileCollection
@@ -32,13 +32,13 @@ class CBGVaadin8UpdateAddonStylesTask extends DefaultTask {
     @Optional
     Boolean logToConsole = Boolean.FALSE
 
-    CBGVaadinUpdateAddonStylesTask() {
+    CBGVaadin8UpdateAddonStylesTask() {
         super()
 
         project.afterEvaluate {
             if (!getEnableTask()) return
 
-            def themesDir = CBGVaadins.getThemesDirectory(project)
+            def themesDir = CBGVaadin8s.getThemesDirectory(project)
             if (themesDir && themesDir.exists()) {
                 themesDir.eachDir {
                     inputs.dir it
@@ -47,7 +47,7 @@ class CBGVaadin8UpdateAddonStylesTask extends DefaultTask {
             }
 
             if (this.getUseClasspathJar()) {
-                CBGVaadinBuildClassPathJar pathJarTask = project.getTasksByName(CBGVaadinBuildClassPathJar.TASK_NAME_VAADIN_BCPJ, true).first()
+                CBGVaadin8BuildClassPathJar pathJarTask = project.getTasksByName(CBGVaadin8BuildClassPathJar.TASK_NAME_VAADIN_BCPJ, true).first()
                 inputs.file(pathJarTask.archivePath)
             }
         }
@@ -57,7 +57,7 @@ class CBGVaadin8UpdateAddonStylesTask extends DefaultTask {
     void run() {
         if (!getEnableTask()) return
 
-        File themesDir = CBGVaadins.getThemesDirectory(project)
+        File themesDir = CBGVaadin8s.getThemesDirectory(project)
         themesDir.mkdirs()
         themesDir.eachDir {
 
@@ -65,10 +65,10 @@ class CBGVaadin8UpdateAddonStylesTask extends DefaultTask {
 
             project.logger.info "更新 $addonsScss"
 
-            FileCollection classpath = CBGVaadins.getCompileClassPathOrJar(project, getUseClasspathJar())
+            FileCollection classpath = CBGVaadin8s.getCompileClassPathOrJar(project, getUseClasspathJar())
 
             if (this.getUseClasspathJar()) {
-                CBGVaadins.findAddonsInProject(project, 'Vaadin-Stylesheets', true).each {
+                CBGVaadin8s.findAddonsInProject(project, 'Vaadin-Stylesheets', true).each {
                     classpath += project.files(it.file)
                 }
             }

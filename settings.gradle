@@ -3,6 +3,7 @@ rootProject.name = "gradle-corebox-plugin-parent"
 include "gradle-corebox-common-plugin"
 include "gradle-corebox-server-plugin"
 include "gradle-corebox-vaadin8-plugin"
+include "gradle-corebox-vaadin-flow-plugin"
 include "gradle-corebox-web-plugin"
 include "gradle-corebox-plugins"
 

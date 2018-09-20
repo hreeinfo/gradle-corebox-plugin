@@ -7,25 +7,15 @@ package com.hreeinfo.corebox.gradle.web
  * <p>版权所属：xingxiuyi </p>
  */
 class CoreBoxWebExtension {
-    Boolean serverEnabled
+    Boolean warjars = Boolean.FALSE
+    String archiveName
+    Set<File> classpaths = []
 
-    Boolean vaadinEnabled
-
-    /**
-     * 是否启用server相关配置
-     * @param enabled
-     */
-    void server(boolean enabled) {
-        println "设置了 server=${enabled}"
-        this.serverEnabled = enabled
+    public warjars(boolean warjars) {
+        this.warjars = warjars
     }
 
-    /**
-     * 是否启用vaadin相关配置
-     * @param enabled
-     */
-    void vaadin(boolean enabled) {
-        println "设置了 vaadin=${enabled}"
-        this.vaadinEnabled = enabled
-    }
+    public archiveName(String archiveName) { this.archiveName = archiveName }
+
+    public classpath(File classpath) { this.classpaths.add(classpath) }
 }

@@ -1,6 +1,7 @@
 package corebox.plugin.gradle.vaadin8.task
 
-import corebox.plugin.gradle.vaadin.CBGVaadins
+import corebox.plugin.gradle.vaadin.CBGVaadin8s
+import corebox.plugin.gradle.vaadin8.CBGVaadin8s
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileTree
 import org.gradle.api.tasks.CacheableTask
@@ -21,14 +22,14 @@ class CBGVaadin8CompressCssTask extends DefaultTask {
     @Input
     Boolean  enableTask = Boolean.TRUE
 
-    CBGVaadinCompressCssTask() {
+    CBGVaadin8CompressCssTask() {
         project.afterEvaluate {
             if (!getEnableTask()) return
-            File themesDir = CBGVaadins.getThemesDirectory(project)
-            FileTree themes = project.fileTree(dir: themesDir, include: CBGVaadinCompileThemeTask.STYLES_SCSS_PATTERN)
+            File themesDir = CBGVaadin8s.getThemesDirectory(project)
+            FileTree themes = project.fileTree(dir: themesDir, include: CBGVaadin8CompileThemeTask.STYLES_SCSS_PATTERN)
             themes.each { File theme ->
                 File dir = new File(theme.parent)
-                inputs.file new File(dir, CBGVaadinCompileThemeTask.STYLES_CSS)
+                inputs.file new File(dir, CBGVaadin8CompileThemeTask.STYLES_CSS)
                 outputs.file new File(dir, 'styles.css.gz')
             }
         }
@@ -41,11 +42,11 @@ class CBGVaadin8CompressCssTask extends DefaultTask {
     }
 
     void compress(boolean isRecompress = false) {
-        File themesDir = CBGVaadins.getThemesDirectory(project)
-        FileTree themes = project.fileTree(dir: themesDir, include: CBGVaadinCompileThemeTask.STYLES_SCSS_PATTERN)
+        File themesDir = CBGVaadin8s.getThemesDirectory(project)
+        FileTree themes = project.fileTree(dir: themesDir, include: CBGVaadin8CompileThemeTask.STYLES_SCSS_PATTERN)
         themes.each { File theme ->
             File dir = new File(theme.parent)
-            File stylesCss = new File(dir, CBGVaadinCompileThemeTask.STYLES_CSS)
+            File stylesCss = new File(dir, CBGVaadin8CompileThemeTask.STYLES_CSS)
             if (stylesCss.exists()) {
                 if (isRecompress) {
                     project.logger.lifecycle("重新压缩 $stylesCss.canonicalPath...")

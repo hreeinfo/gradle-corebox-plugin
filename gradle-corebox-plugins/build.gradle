@@ -9,7 +9,8 @@ dependencies {
     compile(localGroovy())
 
     compile(project(":gradle-corebox-server-plugin"))
-    //compile(project(":gradle-corebox-vaadin-plugin"))
+    compile(project(":gradle-corebox-web-plugin"))
+    compile(project(":gradle-corebox-vaadin-flow-plugin"))
 }
 
 idea {

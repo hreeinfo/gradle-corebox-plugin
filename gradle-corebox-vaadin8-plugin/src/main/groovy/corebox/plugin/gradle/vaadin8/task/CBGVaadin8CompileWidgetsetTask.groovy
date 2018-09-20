@@ -1,7 +1,7 @@
 package corebox.plugin.gradle.vaadin8.task
 
 import corebox.plugin.gradle.common.CBGs
-import corebox.plugin.gradle.vaadin.CBGVaadins
+import corebox.plugin.gradle.vaadin8.CBGVaadin8s
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.FileCollection
@@ -103,17 +103,17 @@ class CBGVaadin8CompileWidgetsetTask extends DefaultTask {
 
     @TaskAction
     void exec() {
-        String widgetset = CBGVaadins.getWidgetset(project)
+        String widgetset = CBGVaadin8s.getWidgetset(project)
         if (widgetset) compileLocally(widgetset)
     }
 
-    private void compileLocally(String widgetset = CBGVaadins.getWidgetset(project)) {
+    private void compileLocally(String widgetset = CBGVaadin8s.getWidgetset(project)) {
 
         // 重新创建目录
-        CBGVaadins.getWidgetsetDirectory(project).mkdirs()
+        CBGVaadin8s.getWidgetsetDirectory(project).mkdirs()
 
         // 增加 client 依赖： 缺少的 classpath jar
-        FileCollection classpath = CBGVaadins.getClientCompilerClassPath(project)
+        FileCollection classpath = CBGVaadin8s.getClientCompilerClassPath(project)
 
         List widgetsetCompileProcess = [CBGs.getJavaBinary(project)]
 
@@ -132,7 +132,7 @@ class CBGVaadin8CompileWidgetsetTask extends DefaultTask {
 
         widgetsetCompileProcess += ['-style', getStyle()]
         widgetsetCompileProcess += ['-optimize', getOptimize()]
-        widgetsetCompileProcess += ['-war', CBGVaadins.getWidgetsetDirectory(project).canonicalPath]
+        widgetsetCompileProcess += ['-war', CBGVaadin8s.getWidgetsetDirectory(project).canonicalPath]
         widgetsetCompileProcess += ['-logLevel', getLogLevel()]
         widgetsetCompileProcess += ['-localWorkers', getLocalWorkers()]
         widgetsetCompileProcess += ['-workDir', project.buildDir.canonicalPath + File.separator + 'tmp']
@@ -160,7 +160,7 @@ class CBGVaadin8CompileWidgetsetTask extends DefaultTask {
         int result = process.waitFor()
 
         // 编译器会在 widgetsets 目录中 生成额外的 WEB-INF ，完成后清理掉
-        new File(CBGVaadins.getWidgetsetDirectory(project), 'WEB-INF').deleteDir()
+        new File(CBGVaadin8s.getWidgetsetDirectory(project), 'WEB-INF').deleteDir()
 
         if (failed || result != 0) throw new GradleException('Widgetset 编译失败，请检查日志')
     }

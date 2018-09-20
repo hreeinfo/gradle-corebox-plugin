@@ -1,7 +1,7 @@
 package corebox.plugin.gradle.vaadin8.task
 
-import corebox.plugin.gradle.vaadin.CBGVaadinPlugin
-import corebox.plugin.gradle.vaadin.CBGVaadins
+import corebox.plugin.gradle.vaadin8.CBGVaadin8Plugin
+import corebox.plugin.gradle.vaadin8.CBGVaadin8s
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.CacheableTask
@@ -24,18 +24,18 @@ class CBGVaadin8BuildClassPathJar extends Jar {
     @Input
     Boolean useClasspathJar = Os.isFamily(Os.FAMILY_WINDOWS)
 
-    CBGVaadinBuildClassPathJar() {
+    CBGVaadin8BuildClassPathJar() {
         super()
 
-        inputs.files project.configurations[CBGVaadinPlugin.CONFIGURATION_THEME]
-        inputs.files project.configurations[CBGVaadinPlugin.CONFIGURATION_SERVER]
-        inputs.files CBGVaadins.getCompileClassPath(project)
+        inputs.files project.configurations[CBGVaadin8Plugin.CONFIGURATION_THEME]
+        inputs.files project.configurations[CBGVaadin8Plugin.CONFIGURATION_SERVER]
+        inputs.files CBGVaadin8s.getCompileClassPath(project)
     }
 
     @Override
     protected void copy() {
         if (getEnableTask()) {
-            FileCollection files = (CBGVaadins.getWarClasspath(project) + project.configurations[CBGVaadinPlugin.CONFIGURATION_THEME]).filter {
+            FileCollection files = (CBGVaadin8s.getWarClasspath(project) + project.configurations[CBGVaadin8Plugin.CONFIGURATION_THEME]).filter {
                 it.file && it.canonicalFile.name.endsWith('.jar')
             }
             manifest {
