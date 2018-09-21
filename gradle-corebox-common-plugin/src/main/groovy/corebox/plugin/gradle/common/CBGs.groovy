@@ -3,6 +3,10 @@ package corebox.plugin.gradle.common
 import groovy.transform.Memoized
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
+import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.plugins.WarPluginConvention
+import org.gradle.api.tasks.SourceSet
 
 import java.nio.charset.Charset
 import java.util.concurrent.Executor
@@ -187,6 +191,55 @@ class CBGs {
     }
 
     /**
+     * 项目的 webapp 目录
+     * @param project
+     * @return
+     */
+    @Memoized
+    static File getWebAppDirectory(Project project) {
+        String outputDir = project.cbvaadin.outputDir
+        if (outputDir) {
+            project.file(outputDir)
+        } else if (project.convention.findPlugin(WarPluginConvention)) {
+            project.convention.getPlugin(WarPluginConvention).webAppDir
+        } else {
+            project.file("src/main/webapp")
+        }
+    }
+
+    @Memoized
+    static FileCollection getCompileClassPath(Project project) {
+        project.sourceSets.main.compileClasspath
+    }
+
+
+    @Memoized
+    static FileCollection getWarClasspath(Project project) {
+        // 包含 project classes 和 resources
+        JavaPluginConvention java = project.convention.getPlugin(JavaPluginConvention)
+        SourceSet mainSourceSet = java.sourceSets.getByName('main')
+        FileCollection classpath = mainSourceSet.output.classesDirs
+        classpath += project.files(mainSourceSet.output.resourcesDir)
+
+        // 包含 runtime 依赖
+        classpath += project.configurations.runtime
+
+        // 移除 provided 依赖
+        if (project.configurations.findByName('providedCompile')) {
+            classpath -= project.configurations.providedCompile
+        }
+
+        if (project.configurations.findByName('providedRuntime')) {
+            classpath -= project.configurations.providedRuntime
+        }
+
+        // 确保没有重复
+        classpath = project.files(classpath.files)
+
+        classpath
+    }
+
+    /**
      * 返回系统变量 此方法不会返回空 如未定义系统变量则返回 []
      * @return
      */
@@ -276,5 +329,35 @@ class CBGs {
         public List<String> output() {
             return this.sb
         }
+    }
+
+    public static boolean enableByProps(Project project, String... pn) {
+        for (String p : pn) if (enableByProp(project, p)) return true
+        return false
+    }
+
+    public static boolean enableByProp(Project project, String pn) {
+        Object o = project.findProperty(pn)
+        if (!o) return false
+
+        String v = o.toString()
+
+        if ("true".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v) || "".equalsIgnoreCase(v)) return true
+        if (o == true || o == Boolean.TRUE) return true
+
+        return false
+    }
+
+
+    public static boolean diableByProp(Project project, String pn) {
+        Object o = project.findProperty(pn)
+        if (!o) return false
+
+        String v = o.toString()
+
+        if ("false".equalsIgnoreCase(v) || "no".equalsIgnoreCase(v)) return true
+        if (o == false || o == Boolean.FALSE) return true
+
+        return false
     }
 }

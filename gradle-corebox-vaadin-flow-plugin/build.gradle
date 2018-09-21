@@ -1,0 +1,61 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id "groovy"
+    id "maven"
+    id "idea"
+}
+
+
+dependencies {
+    compile(gradleApi())
+    compile(localGroovy())
+
+    compile(project(":gradle-corebox-common-plugin"))
+    compile("com.vaadin:flow-maven-plugin:${version_vaadin_flow}") {
+        exclude group: "org.apache.maven", module: "maven-plugin-api"
+        exclude group: "org.apache.maven", module: "maven-core"
+        exclude group: "org.apache.maven.plugin-tools", module: "maven-plugin-annotations"
+    }
+
+    //compileOnly("io.bit3:jsass:${version_jsass}")
+}
+
+
+processResources {
+    inputs.property('version', project.version)
+    inputs.property('version_vaadin_flow', "${version_vaadin_flow}")
+    inputs.property('version_servlet', "${version_servlet}")
+
+    from(sourceSets.main.resources.srcDirs) {
+        filesMatching("/gradle-corebox-vaadin-flow-plugin.properties") {
+            filter(ReplaceTokens, tokens: [
+                    'version'      : project.version.toString(),
+                    version_vaadin_flow : "${version_vaadin_flow}".toString(),
+                    version_server_production_mode : "${version_server_production_mode}".toString(),
+                    version_nodejs : "${version_nodejs}".toString(),
+                    version_yarn : "${version_yarn}".toString(),
+                    version_servlet: "${version_servlet}".toString()
+            ])
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                "Vaadin-Package-Version": 1,
+                "Vaadin-License-Title": "Apache 2.0",
+                "Implementation-Title": "Corebox Vaadin Flow Plugin for Gradle",
+                "Implementation-Version": version,
+                "Implementation-Vendor": "xingxiuyi",
+        )
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}

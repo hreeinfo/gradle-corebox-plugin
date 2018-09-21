@@ -17,7 +17,7 @@ import org.gradle.api.tasks.SourceSetOutput
  */
 class CBGServerPlugin implements Plugin<Project> {
     static final String SERVER_EXTENSION_NAME = "cbserver"
-    static final String WEBAPP_EXTENSION_NAME = "cbwebapp"
+    static final String WEBAPP_EXTENSION_NAME = "cbweb"
     static final String TASK_GROUP = "corebox"
 
     static final String TASK_EXPLODE_WAR_NAME = "explodedWar"
@@ -70,11 +70,15 @@ class CBGServerPlugin implements Plugin<Project> {
     void apply(Project project) {
         if (project.plugins.findPlugin(WarPlugin) == null) project.plugins.apply(WarPlugin)
 
-        project.configurations.create(SERVER_EXTENSION_NAME).setVisible(false).setTransitive(true)
-                .setDescription("用于 cbserver 运行的库依赖 仅在server运行时可见")
+        if (!project.configurations.findByName(SERVER_EXTENSION_NAME)) {
+            project.configurations.create(SERVER_EXTENSION_NAME).setVisible(false).setTransitive(true)
+                    .setDescription("用于 cbserver 运行的库依赖 仅在server运行时可见")
+        }
 
-        project.configurations.create(WEBAPP_EXTENSION_NAME).setVisible(false).setTransitive(true)
-                .setDescription("用于 cbwebapp 库依赖 此配置将作为附加的webapp classpath送给server context")
+        if (!project.configurations.findByName(WEBAPP_EXTENSION_NAME)) {
+            project.configurations.create(WEBAPP_EXTENSION_NAME).setVisible(false).setTransitive(true)
+                    .setDescription("用于 cbweb 库依赖 此配置将作为附加的webapp classpath送给server context")
+        }
 
         CBGServerExtension spe = project.extensions.create(SERVER_EXTENSION_NAME, CBGServerExtension.class)
 
