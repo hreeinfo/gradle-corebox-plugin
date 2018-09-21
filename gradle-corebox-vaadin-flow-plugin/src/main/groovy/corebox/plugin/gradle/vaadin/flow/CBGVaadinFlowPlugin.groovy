@@ -119,6 +119,7 @@ class CBGVaadinFlowPlugin implements Plugin<Project> {
             }
             conventionMapping.map("yarnNetworkConcurrency") { vfe.yarnNetworkConcurrency }
             conventionMapping.map("fragments") { vfe.fragments }
+            conventionMapping.map("persistFrontend") { vfe.persistFrontend }
             conventionMapping.map("classpaths") {
                 Set<File> files = []
 
